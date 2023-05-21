@@ -17,6 +17,8 @@ DATA_DIR = os.environ["DATA_DIR"]
 
 DISCORD_TOKEN = os.environ["DISCORD_TOKEN"]
 
+SELENIUM_DRIVER_URL = os.environ["SELENIUM_DRIVER_URL"]
+
 READ_DB_SCHEME = os.environ["READ_DB_SCHEME"]
 READ_DB_HOST = os.environ["READ_DB_HOST"]
 READ_DB_PORT = int(os.environ["READ_DB_PORT"])

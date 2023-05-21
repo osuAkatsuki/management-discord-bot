@@ -1,11 +1,17 @@
 from selenium import webdriver
+import settings
 
 
 class WebDriver(webdriver.Remote):
     def __init__(self, *args, **kwargs):
         options = webdriver.ChromeOptions()
         options.add_argument("--headless")
-        super().__init__(options=options, *args, **kwargs)
+        super().__init__(
+            command_executor=settings.SELENIUM_DRIVER_URL,
+            options=options,
+            *args,
+            **kwargs,
+        )
 
     def capture_web_canvas(self, url: str, output_path: str):
         self.get(url)
