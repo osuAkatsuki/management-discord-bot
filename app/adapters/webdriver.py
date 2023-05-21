@@ -1,7 +1,7 @@
 from selenium import webdriver
 
 
-class WebDriver(webdriver.Chrome):
+class WebDriver(webdriver.Remote):
     def __init__(self, *args, **kwargs):
         options = webdriver.ChromeOptions()
         options.add_argument("--headless")
