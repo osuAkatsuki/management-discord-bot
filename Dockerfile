@@ -21,8 +21,6 @@ RUN chmod u+x /scripts/*
 COPY . /srv/root
 WORKDIR /srv/root
 
-RUN chmod u+x /srv/root/app/main.py
-
 EXPOSE 80
 
 ENTRYPOINT ["/scripts/run-bot.sh"]
