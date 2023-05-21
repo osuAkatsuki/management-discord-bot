@@ -1,0 +1,6 @@
+discord
+asyncpg
+databases
+python-dotenv
+httpx
+selenium
