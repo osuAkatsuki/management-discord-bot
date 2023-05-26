@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Score Template</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <style>
+    :root {
+      --misc-text-colour: <% misc-colour %>;
+      --title-text-colour: <% title-colour %>;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    .main-container-bg {
+      position: relative;
+      text-align: center;
+      width: 1920px;
+      height: 1080px;
+      background-image: url("<% bg-image %>");
+    }
+
+    .container-bg-filters {
+      position: absolute;
+      backdrop-filter: brightness(110%);
+      -webkit-backdrop-filter: brightness(110%);
+      height: 100%;
+      width: 100%;
+    }
+
+    .top-container {
+      position: relative;
+      height: 244px;
+      width: 1920px;
+    }
+
+    .username-box {
+      position: relative;
+      color: white;
+      font-family: "Quicksand", sans-serif;
+      font-weight: 500;
+      font-size: 130px;
+      text-shadow: 0 0 7px #fff, 0 0 30px #000, 0 0 40px #000;
+      line-height: 244px;
+    }
+
+    .mode-icon-box {
+      filter: drop-shadow(0 0 4px #fff) drop-shadow(0 0 30px #000);
+      position: absolute;
+      top: 3.5rem;
+      right: 2rem;
+      height: 134px;
+      width: 134px;
+    }
+
+    .white-horizontal-line {
+      position: relative;
+      width: 1920px;
+      height: 8px;
+      background-color: white;
+      box-shadow: 0 0 5px #edc8ff, 0 0 30px #000, 0 0 40px #000;
+    }
+
+    .main-container {
+      padding: 0;
+      height: calc(100% - 252px);
+    }
+
+    .row {
+      position: relative;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+
+    .top-row {
+      height: 57%;
+    }
+
+    .bottom-row {
+      height: 43%;
+    }
+
+    .column {
+      position: relative;
+      display: inline-block;
+      width: 40%;
+      padding-left: 1rem;
+      padding-right: 1rem;
+      vertical-align: top;
+    }
+
+    .avatar-column {
+      width: 21%;
+    }
+
+    .main-text-column {
+      width: 79%;
+    }
+
+    .logo-column {
+      width: 33%;
+    }
+
+    .pp-column {
+      width: 37%;
+    }
+
+    .acc-and-misc-column {
+      width: 30%;
+    }
+
+    .logo-box {
+      width: 590px;
+      height: 335px;
+      filter: drop-shadow(0 0 30px #000);
+      padding-left: 1rem;
+      padding-bottom: 1rem;
+    }
+
+    .avatar-box {
+      position: relative;
+      left: 3rem;
+      float: left;
+    }
+
+    .avatar {
+      box-shadow: 0 0 30px #000;
+      width: 320px;
+      height: 320px;
+      position: relative;
+      border-radius: 15px;
+      border: 6px solid #3d4349;
+      object-fit: cover;
+    }
+
+    .flag-container {
+      position: absolute;
+      width: 100px;
+      height: 75.36px;
+      z-index: 1;
+      border-radius: 15px;
+      background: #3d4349;
+    }
+
+    .flag {
+      position: relative;
+      width: 100px;
+      border-radius: 15px;
+      border: 7px solid #3d4349;
+    }
+
+    .separator {
+      position: relative;
+      width: 100%;
+    }
+
+    .pp-text {
+      position: relative;
+      color: white;
+      font-family: "Quicksand", sans-serif;
+      font-weight: 500;
+      font-size: 150px;
+      text-shadow: 0 0 7px white, 0 0 30px #000, 0 0 40px #000;
+    }
+
+    .half-row {
+      height: 40%;
+    }
+
+    .row-33 {
+      height: 33%;
+    }
+
+    .flex-box {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      align-content: center;
+    }
+
+    .accuracy-text {
+      font-size: 100px;
+      color: white;
+      font-family: "Quicksand", sans-serif;
+      font-weight: 500;
+      text-shadow: 0 0 7px white, 0 0 30px #000, 0 0 40px #000;
+    }
+    .misc-text {
+      text-shadow: 0 0 7px var(--misc-text-colour, #f0cb58),
+        0 0 30px var(--misc-text-colour, #f0cb58), 0 0 40px #000;
+      font-size: 120px;
+      font-family: "Quicksand", sans-serif;
+      font-weight: 500;
+      color: var(--misc-text-colour, #f0cb58);
+      right: 0.1em;
+      position: relative;
+    }
+
+    .artist-text {
+      text-shadow: 0 0 7px #fff, 0 0 30px #000, 0 0 40px #000;
+      font-size: 90px;
+      white-space: nowrap;
+      color: white;
+      font-family: "Quicksand", sans-serif;
+      font-weight: 500;
+    }
+
+    .title-text {
+      font-size: 90px;
+      white-space: nowrap;
+      color: var(--title-text-colour, #cde7ff);
+      text-shadow: 0 0 7px var(--title-text-colour, #cde7ff), 0 0 30px #000,
+        0 0 40px #000;
+      font-family: "Quicksand", sans-serif;
+      font-weight: 600;
+    }
+
+    .map-info-text {
+      color: white;
+      white-space: nowrap;
+      text-shadow: 0 0 7px #fff, 0 0 30px #000, 0 0 40px #000;
+      font-size: 60px;
+      font-family: "Quicksand", sans-serif;
+      font-weight: 500;
+    }
+
+    .input-boxes {
+      font-family: "Quicksand", sans-serif;
+      font-weight: 500;
+      position: relative;
+      left: 25%;
+      border: 2px solid #000;
+      width: 50%;
+      height: auto;
+      padding: 1rem;
+      margin-bottom: 1em;
+    }
+
+    .input-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+  </style>
+  <body>
+    <div class="main-container-bg">
+      <div class="top-container">
+        <div class="username-box"><% username %></div>
+        <img
+          class="mode-icon-box"
+          src="https://akatsuki.gg/static/thumbnails/assets/<% mode %>.png"
+        />
+      </div>
+      <div class="white-horizontal-line"></div>
+      <div class="main-container">
+        <div class="row top-row">
+          <div class="separator"></div>
+          <div class="avatar-column column">
+            <div class="avatar-box">
+              <div class="flag-container">
+                <img
+                  class="flag"
+                  src="https://raw.githubusercontent.com/ppy/osu-resources/master/osu.Game.Resources/Textures/Flags/<% country %>.png"
+                />
+              </div>
+              <img class="avatar" src="https://a.akatsuki.gg/<% userid %>" />
+            </div>
+          </div>
+          <div id="textParent" class="main-text-column column">
+            <div class="row flex-box row-33">
+              <div class="artist-text"><% artist %></div>
+            </div>
+            <div class="row flex-box row-33">
+              <div class="title-text"><% title %></div>
+            </div>
+            <div class="row flex-box row-33">
+              <div class="map-info-text">
+                [<% map-diff %>] <% mods %> | <% combo %>x/<% max-combo %>x
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row bottom-row">
+          <div class="column logo-column">
+            <img
+              class="logo-box"
+              src="https://akatsuki.gg/static/thumbnails/assets/logo.png"
+            />
+          </div>
+          <div class="column pp-column flex-box">
+            <div class="pp-text"><% pp-val %>pp</div>
+          </div>
+          <div class="column acc-and-misc-column">
+            <div class="row half-row flex-box">
+              <div class="accuracy-text"><% acc %>%</div>
+            </div>
+            <div class="row half-row flex-box">
+              <div class="misc-text"><% misc-text %></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+  <script>
+    // Writing this function on akatsuki was honestly the best idea ever lmfao
+    function resizeText(parent, child) {
+      var parentDom = document.querySelector(parent);
+      var childText = document.querySelector(child);
+
+      var widthParent = parentDom.offsetWidth;
+      var widthChildText = childText.offsetWidth;
+      console.log(widthParent, widthChildText);
+
+      while (widthChildText > widthParent - 26) {
+        var fontSize = parseInt(window.getComputedStyle(childText).fontSize);
+        childText.style.fontSize = fontSize - 1 + "px";
+        widthChildText = childText.offsetWidth;
+      }
+    }
+
+    document.onreadystatechange = function () {
+      if (document.readyState == "complete") {
+        resizeText("#textParent", ".artist-text");
+        resizeText("#textParent", ".title-text");
+        resizeText("#textParent", ".map-info-text");
+      }
+    };
+  </script>
+</html>

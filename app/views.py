@@ -7,7 +7,7 @@ from app import scorewatch, settings
 
 from discord.ext import commands
 from app.constants import Status, VoteType
-from app.repositories import sw_requests, sw_votes, users
+from app.repositories import scores, sw_requests, sw_votes, users
 
 
 class ReportForm(discord.ui.Modal):
@@ -217,8 +217,18 @@ class ScorewatchVoteButton(discord.ui.Button):
             datetime.datetime.utcnow(),
         )
 
-        updated_embed = await scorewatch.generate_scorewatch_embed(
-            self.bot, request_data, status
+        score_data = await scores.fetch_one(
+            request_data["score_id"], request_data["score_relax"]
+        )
+
+        if not score_data:
+            await interaction.channel.send(
+                "Couldn't find this play!",
+            )
+            return
+
+        updated_embed = await scorewatch.format_request_embed(
+            self.bot, score_data, request_data, status
         )
         if isinstance(updated_embed, str):
             await interaction.channel.send(updated_embed)
@@ -234,6 +244,37 @@ class ScorewatchVoteButton(discord.ui.Button):
                 """,
             ),
         )
+
+        if status == Status.DENIED:
+            return  # we don't need to do anything else
+
+        await interaction.channel.send(
+            "Generating scorewatch metadata, it will show up in a moment...",
+        )
+
+        async with interaction.channel.typing():
+            metadata = await scorewatch.generate_normal_metadata(score_data)
+
+            if isinstance(metadata, str):
+                await interaction.channel.send(metadata)
+                return
+
+            await interaction.channel.send(
+                "\n".join(
+                    (
+                        "**Title:**",
+                        f"```{metadata['title']}```",
+                        "",
+                        "**Description:**",
+                        f"```{metadata['description']}```",
+                        "",
+                        "**Thumbnail:**",
+                    ),
+                ),
+                file=discord.File(
+                    metadata["file"],
+                ),
+            )
 
 
 class ScorewatchButtonView(discord.ui.View):

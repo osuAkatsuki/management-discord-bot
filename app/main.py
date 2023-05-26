@@ -302,7 +302,7 @@ async def request(
         thread.id,
     )
 
-    embed = await scorewatch.generate_scorewatch_embed(bot, request_data, status)
+    embed = await scorewatch.format_request_embed(bot, score_data, request_data, status)
 
     if isinstance(embed, str):
         await interaction.followup.send(embed, ephemeral=True)

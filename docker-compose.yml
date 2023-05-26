@@ -16,6 +16,8 @@ services:
 
   selenium:
     image: selenium/standalone-chrome:latest
+    volumes:
+      - ./data:/bot-data
     ports:
       - 4444:4444
 
