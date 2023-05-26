@@ -35,6 +35,12 @@ dirs = (
     os.path.join(settings.DATA_DIR, "finals", "thumbnails"),
 )
 
+SW_WHITELIST = [
+    291927822635761665,  # lenforiee
+    285190493703503872,  # cmyui
+    153954447247147018,  # rapha
+]
+
 
 def check_folder(path: str) -> None:
     if not os.path.exists(path):
@@ -309,6 +315,111 @@ async def request(
         return
 
     await thread_embed.edit(embed=embed)
+
+
+@bot.tree.command(
+    name="regenerate",
+    description="Regenerate a youtube thumbnail, title and description!",
+)
+@app_commands.describe(
+    score_id="Score ID",
+    username="(Optional) Username of the player",
+    artist="(Optional) Artist of the map",
+    title="(Optional) Title of the map",
+    difficulty_name="(Optional) Difficulty name of the map",
+    detail_text="(Optional) Detail text in bottom right corner (Thumbnail)",
+    detail_colour="(Optional) Detail colour (hex) for misc text (Thumbnail)",
+)
+async def regenerate(
+    interaction: discord.Interaction,
+    score_id: str,
+    username: str = "",
+    artist: str = "",
+    title: str = "",
+    difficulty_name: str = "",
+    detail_text: str = "",
+    detail_colour: str = "",
+) -> None:
+    await interaction.response.defer()
+
+    role = interaction.guild.get_role(settings.AKATSUKI_SCOREWATCH_ROLE_ID)  # type: ignore
+    if not role:
+        return  # ???????
+
+    if not role in interaction.user.roles:  # type: ignore
+        await interaction.followup.send(
+            "You don't have permission to run this command!",
+            ephemeral=True,
+        )
+        return
+
+    if not interaction.user.id in SW_WHITELIST:
+        await interaction.followup.send(
+            "You don't have permission to run this command!",
+            ephemeral=True,
+        )
+        return
+
+    if not score_id.isnumeric():
+        await interaction.followup.send(
+            "You must provide a valid score ID!",
+            ephemeral=True,
+        )
+        return
+
+    request_data = await sw_requests.fetch_one(int(score_id))
+    if not request_data:
+        await interaction.followup.send(
+            "Couldn't find this request!",
+            ephemeral=True,
+        )
+        return
+
+    if request_data["request_status"] != Status.ACCEPTED.value:
+        await interaction.followup.send(
+            "This request is not accepted!",
+            ephemeral=True,
+        )
+        return
+
+    score_data = await scores.fetch_one(int(score_id), request_data["score_relax"])
+    if not score_data:
+        await interaction.followup.send(
+            "Couldn't find this score!",
+            ephemeral=True,
+        )
+        return
+
+    metadata = await scorewatch.generate_normal_metadata(
+        score_data,
+        username,
+        artist,
+        title,
+        difficulty_name,
+        detail_text,
+        detail_colour,
+    )
+
+    if isinstance(metadata, str):
+        await interaction.followup.send(metadata)
+        return
+
+    await interaction.followup.send(
+        "\n".join(
+            (
+                "**Title:**",
+                f"```{metadata['title']}```",
+                "",
+                "**Description:**",
+                f"```{metadata['description']}```",
+                "",
+                "**Thumbnail:**",
+            ),
+        ),
+        file=discord.File(
+            metadata["file"],
+        ),
+    )
 
 
 if __name__ == "__main__":
