@@ -1,10 +1,14 @@
+import datetime
+import textwrap
 from urllib import parse
 import discord
 
-from app import settings
+from app import scorewatch, settings
 
 from discord.ext import commands
-from app.repositories import users
+from app.constants import Status, VoteType
+from app.repositories import sw_requests, sw_votes, users
+
 
 class ReportForm(discord.ui.Modal):
     def __init__(self, bot: commands.Bot) -> None:
@@ -35,10 +39,12 @@ class ReportForm(discord.ui.Modal):
 
         if not parsed_url.hostname in ("akatsuki.gg", "akatsuki.pw"):
             await interaction.followup.send(
-                """\
-                You must provide a valid Akatsuki profile URL.
-                Valid syntax: `https://akatsuki.gg/u/999`
-                """,
+                textwrap.dedent(
+                    """\
+                    You must provide a valid Akatsuki profile URL.
+                    Valid syntax: `https://akatsuki.gg/u/999`
+                    """
+                ),
                 ephemeral=True,
             )
             return
@@ -50,7 +56,7 @@ class ReportForm(discord.ui.Modal):
 
         user_data = await users.fetch_one(url_type, user_id)
 
-        # they should be not banned 
+        # they should be not banned
         if not user_data:
             await interaction.followup.send(
                 "Player could not be found!",
@@ -81,15 +87,177 @@ class ReportForm(discord.ui.Modal):
         await interaction.followup.send("Thank you for your report!", ephemeral=True)
         await channel.send(embed=embed)  # type: ignore
 
+
 class ReportView(discord.ui.View):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="Click Here!", style=discord.ButtonStyle.primary, custom_id="report")
+    @discord.ui.button(
+        label="Click Here!", style=discord.ButtonStyle.primary, custom_id="report"
+    )
     async def report(
-        self, 
-        interaction: discord.Interaction, 
+        self,
+        interaction: discord.Interaction,
         _: discord.ui.Button,
     ):
         await interaction.response.send_modal(ReportForm(self.bot))
+
+
+class ScorewatchVoteButton(discord.ui.Button):
+    def __init__(
+        self, score_id: int, vote_type: VoteType, bot: commands.Bot, *args, **kwargs
+    ):
+        self.bot = bot
+        self.vote_type = vote_type
+        self.score_id = score_id
+        super().__init__(*args, **kwargs)
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
+        if not isinstance(interaction.channel, discord.Thread):
+            return
+
+        role = interaction.guild.get_role(settings.AKATSUKI_SCOREWATCH_ROLE_ID)  # type: ignore
+        if not role:
+            return  # ???????
+
+        if not role in interaction.user.roles:  # type: ignore
+            await interaction.followup.send(
+                "You don't have permission to vote on this request!",
+                ephemeral=True,
+            )
+
+        request_data = await sw_requests.fetch_one(self.score_id)
+        if not request_data:  # perhaps we can add removing requests?
+            await interaction.followup.send(
+                "This request no longer exists!",
+                ephemeral=True,
+            )
+            return
+
+        if request_data["request_status"] in Status.resolved_statuses():
+            await interaction.followup.send(
+                "This request has already been resolved!",
+                ephemeral=True,
+            )
+            return
+
+        prev_vote = await sw_votes.fetch_one(
+            request_data["request_id"], interaction.user.id
+        )
+        if prev_vote:
+            await interaction.followup.send(
+                "You have already voted on this request!",
+                ephemeral=True,
+            )
+            return
+
+        await sw_votes.create(
+            request_data["request_id"],
+            interaction.user.id,
+            self.vote_type,
+        )
+
+        upvotes = await sw_votes.fetch_all(
+            request_data["request_id"],
+            VoteType.UPVOTE,
+        )
+        downvotes = await sw_votes.fetch_all(
+            request_data["request_id"],
+            VoteType.DOWNVOTE,
+        )
+        all_votes = {vote["vote_user_id"]: vote for vote in upvotes + downvotes}
+
+        users_mentions = {
+            member.id: member.mention for member in role.members  # type: ignore
+        }
+
+        left_to_vote = set()
+        for user_id, user_mention in users_mentions.items():
+            if user_id not in all_votes:
+                left_to_vote.add(user_mention)
+
+        msg_content = textwrap.dedent(
+            f"""\
+                Hey, <@&{settings.AKATSUKI_SCOREWATCH_ROLE_ID}>! A new upload request has been submitted.
+
+                **Remember you can only vote once!**
+
+                **Vote with the reactions below!**
+                **{len(all_votes)}**/{len(users_mentions)} voted!
+                List of people left to vote:
+                {', '.join(left_to_vote)}
+            """,
+        )
+
+        old_thread_msg = await interaction.channel.fetch_message(
+            request_data["thread_message_id"]
+        )
+        await old_thread_msg.edit(content=msg_content)
+        await interaction.followup.send(
+            f"Your vote has been recorded!",
+            ephemeral=True,
+        )
+
+        if len(all_votes) != len(users_mentions):
+            return
+
+        # we have all the votes, let's resolve this request
+        # TODO: what should we do if there is a tie?
+        if len(upvotes) > len(downvotes):
+            status = Status.ACCEPTED
+        else:
+            status = Status.DENIED
+
+        await sw_requests.partial_update(
+            request_data["score_id"],
+            status.value,
+            datetime.datetime.utcnow(),
+        )
+
+        updated_embed = await scorewatch.generate_scorewatch_embed(
+            self.bot, request_data, status
+        )
+        if isinstance(updated_embed, str):
+            await interaction.channel.send(updated_embed)
+            return
+
+        await old_thread_msg.edit(embed=updated_embed)
+
+        await interaction.channel.send(
+            textwrap.dedent(
+                f"""\
+                    All votes have been casted and the request has been closed!
+                    The request has been marked as **{status}**!
+                """,
+            ),
+        )
+
+
+class ScorewatchButtonView(discord.ui.View):
+    def __init__(self, score_id: int, bot: commands.Bot):
+        self.bot = bot
+        self.score_id = score_id
+        super().__init__(timeout=None)
+
+        self.accept_btn = ScorewatchVoteButton(
+            self.score_id,
+            VoteType.UPVOTE,
+            self.bot,
+            style=discord.ButtonStyle.green,
+            label="Accept",
+            custom_id="accept",
+        )
+        self.add_item(self.accept_btn)
+
+        self.deny_btn = ScorewatchVoteButton(
+            self.score_id,
+            VoteType.DOWNVOTE,
+            self.bot,
+            style=discord.ButtonStyle.red,
+            label="Deny",
+            custom_id="deny",
+        )
+        self.add_item(self.deny_btn)
