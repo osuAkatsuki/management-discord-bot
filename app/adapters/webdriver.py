@@ -1,4 +1,5 @@
 from selenium import webdriver
+from selenium.webdriver.remote.file_detector import LocalFileDetector
 import settings
 
 
@@ -12,6 +13,7 @@ class WebDriver(webdriver.Remote):
             *args,
             **kwargs,
         )
+        self.file_detector = LocalFileDetector()
 
     def capture_web_canvas(self, url: str, output_path: str):
         self.get(url)

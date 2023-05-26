@@ -4,3 +4,8 @@ databases
 python-dotenv
 httpx
 selenium
+Pillow
+blend_modes
+numpy
+aiosu
+slider
