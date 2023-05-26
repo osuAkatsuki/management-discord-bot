@@ -3,7 +3,7 @@ name: staging-deploy
 on:
   push:
     branches:
-      - main
+      - master
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
