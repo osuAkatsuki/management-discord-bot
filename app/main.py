@@ -399,12 +399,12 @@ async def regenerate(
         )
         return
 
-    if request_data["request_status"] != Status.ACCEPTED.value:
-        await interaction.followup.send(
-            "This request is not accepted!",
-            ephemeral=True,
-        )
-        return
+    # if request_data["request_status"] != Status.ACCEPTED.value:
+    #     await interaction.followup.send(
+    #         "This request is not accepted!",
+    #         ephemeral=True,
+    #     )
+    #     return
 
     score_data = await scores.fetch_one(int(score_id), request_data["score_relax"])
     if not score_data:
