@@ -44,7 +44,7 @@ async def fetch_one(score_id: int, relax: int) -> Score | None:
     )
     resp = res.json()
 
-    if not resp or resp["code"] == 404:
+    if not resp or resp["code"] != 200:
         return None
 
     rec = {

@@ -15,7 +15,7 @@ async def fetch_one(_type: str, user_id: int | str) -> User | None:
     )
     resp = res.json()
 
-    if not resp or resp["code"] == 404:
+    if not resp or resp["code"] != 200:
         return None
 
     rec = {
