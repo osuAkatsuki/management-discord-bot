@@ -1,0 +1,12 @@
+app:
+  name: management-discord-bot
+  environment: staging
+  group: backend
+  replicaCount: 1
+  container:
+    image:
+      repository: registry.digitalocean.com/akatsuki/management-discord-bot
+      tag: latest
+    imagePullSecrets:
+      - name: akatsuki
+    port: 80
