@@ -128,6 +128,7 @@ class ScorewatchVoteButton(discord.ui.Button):
                 "You don't have permission to vote on this request!",
                 ephemeral=True,
             )
+            return
 
         request_data = await sw_requests.fetch_one(self.score_id)
         if not request_data:  # perhaps we can add removing requests?
