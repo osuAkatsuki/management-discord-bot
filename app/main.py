@@ -363,14 +363,7 @@ async def regenerate(
     if not role:
         return  # ???????
 
-    if not role in interaction.user.roles:  # type: ignore
-        await interaction.followup.send(
-            "You don't have permission to run this command!",
-            ephemeral=True,
-        )
-        return
-
-    if not interaction.user.id in SW_WHITELIST:
+    if not role in interaction.user.roles and not interaction.user.id in SW_WHITELIST:  # type: ignore
         await interaction.followup.send(
             "You don't have permission to run this command!",
             ephemeral=True,
