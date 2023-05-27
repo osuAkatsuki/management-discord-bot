@@ -275,17 +275,27 @@ async def request(
         )
         return
 
-    thread_starter_message_content = textwrap.dedent(
-        f"""\
-        {interaction.user.mention} requested a replay upload for ID [{score_id}](<https://akatsuki.gg/web/replays/{score_id}>)
-
-        Player: [{score_data['user']['username']}](<https://akatsuki.gg/u/{score_data['user']['id']}>)
-        Map: [{score_data['beatmap']['song_name']}](<https://akatsuki.gg/b/{score_data['beatmap']['beatmap_id']}>)
-
-        🔽 for specific details see the thread 🔽
-        """,
+    thread_starter_message_embed = discord.Embed(
+        title="Replay Upload Request",
+        description=f"{interaction.user.mention} requested a replay upload for score ID **[{score_id}](https://akatsuki.gg/web/replays/{score_id})**",
+        color=0x3498DB,
     )
-    thread_starter_message = await channel.send(thread_starter_message_content)  # type: ignore
+
+    thread_starter_message_embed.add_field(
+        name="Basic Details",
+        value=textwrap.dedent(
+            f"""\
+                ▸ Player: [{score_data['user']['username']}](https://akatsuki.gg/u/{score_data['user']['id']})
+                ▸ Map: [{score_data['beatmap']['song_name']}](https://akatsuki.gg/b/{score_data['beatmap']['beatmap_id']})
+            """
+        ),
+        inline=False,
+    )
+    thread_starter_message_embed.set_footer(
+        text="🔽 For specific details see the thread 🔽"
+    )
+
+    thread_starter_message = await channel.send(embed=thread_starter_message_embed)  # type: ignore
     status = Status.PENDING
 
     await interaction.followup.send(
@@ -293,9 +303,13 @@ async def request(
         ephemeral=True,
     )
 
+    thread_name = f"[{relax_text}] {score_data['user']['username']} - {score_data['beatmap']['song_name']}"
+    if len(thread_name) > 100:
+        thread_name = thread_name[:95] + "..."
+
     thread_starter_message.guild = interaction.guild
     thread = await thread_starter_message.create_thread(
-        name=f"[{relax_text}] {score_data['user']['username']} - {score_data['beatmap']['song_name']}",
+        name=thread_name,
     )
 
     users_mentions = set(map(lambda x: x.mention, role.members))
