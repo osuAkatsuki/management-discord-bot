@@ -238,7 +238,8 @@ async def request(
         return
 
     replay_path = os.path.join(settings.DATA_DIR, "replay", f"{score_id}.osr")
-    await state.http_client.download_file(replay_url, replay_path, is_replay=True)
+    if not os.path.exists(replay_path):
+        await state.http_client.download_file(replay_url, replay_path, is_replay=True)
 
     if not os.path.exists(replay_path):
         await interaction.followup.send(
@@ -349,8 +350,8 @@ async def request(
 
 
 @bot.tree.command(
-    name="regenerate",
-    description="Regenerate a youtube thumbnail, title and description!",
+    name="generate",
+    description="Generate a youtube thumbnail, title and description!",
 )
 @app_commands.describe(
     score_id="Score ID",
@@ -361,7 +362,7 @@ async def request(
     detail_text="(Optional) Detail text in bottom right corner (Thumbnail)",
     detail_colour="(Optional) Detail colour (hex) for misc text (Thumbnail)",
 )
-async def regenerate(
+async def generate(
     interaction: discord.Interaction,
     score_id: str,
     username: str = "",
@@ -391,22 +392,28 @@ async def regenerate(
         )
         return
 
-    request_data = await sw_requests.fetch_one(int(score_id))
-    if not request_data:
+    replay_path = os.path.join(settings.DATA_DIR, "replay", f"{score_id}.osr")
+    if not os.path.exists(replay_path):
+        await state.http_client.download_file(
+            f"https://akatsuki.gg/web/replays/{score_id}", replay_path, is_replay=True
+        )
+
+    if not os.path.exists(replay_path):
         await interaction.followup.send(
-            "Couldn't find this request!",
+            "This replay does not exist!",
             ephemeral=True,
         )
         return
 
-    # if request_data["request_status"] != Status.ACCEPTED.value:
-    #     await interaction.followup.send(
-    #         "This request is not accepted!",
-    #         ephemeral=True,
-    #     )
-    #     return
+    replay_file = aiosu.utils.replay.parse_path(replay_path)
 
-    score_data = await scores.fetch_one(int(score_id), request_data["score_relax"])
+    relax = 0
+    if replay_file.mods & Mod.Relax:
+        relax = 1
+    elif replay_file.mods & Mod.Autopilot:
+        relax = 2
+
+    score_data = await scores.fetch_one(int(score_id), relax)
     if not score_data:
         await interaction.followup.send(
             "Couldn't find this score!",
