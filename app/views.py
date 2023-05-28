@@ -206,8 +206,9 @@ class ScorewatchVoteButton(discord.ui.Button):
             return
 
         # we have all the votes, let's resolve this request
-        # TODO: what should we do if there is a tie?
-        if len(upvotes) > len(downvotes):
+        if len(upvotes) == len(downvotes):
+            status = Status.TIED
+        elif len(upvotes) > len(downvotes):
             status = Status.ACCEPTED
         else:
             status = Status.DENIED
@@ -248,6 +249,13 @@ class ScorewatchVoteButton(discord.ui.Button):
 
         if status == Status.DENIED:
             return  # we don't need to do anything else
+
+        if status == Status.TIED:
+            await interaction.channel.send(
+                "The request was tied, so it should be manually resolved "
+                f"by <@&{settings.AKATSUKI_SCOREWATCH_ROLE_ID}> members!",
+            )
+            return
 
         await interaction.channel.send(
             "Generating scorewatch metadata, it will show up in a moment...",

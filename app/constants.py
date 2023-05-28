@@ -17,6 +17,7 @@ class Status(Enum):
     PENDING = "pending"
     ACCEPTED = "accepted"
     DENIED = "denied"
+    TIED = "tied"
     UPLOADED = "uploaded"
 
     def __str__(self) -> str:
@@ -35,4 +36,5 @@ class Status(Enum):
         return {
             Status.ACCEPTED: 10352512,
             Status.DENIED: 16220288,
+            Status.TIED: 15565824,
         }.get(self, 16246912)
