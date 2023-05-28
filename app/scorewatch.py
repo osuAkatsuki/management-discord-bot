@@ -95,11 +95,12 @@ async def generate_normal_metadata(
     detail_colour: str | None = None,
 ) -> dict[str, str] | str:
     replay_path = os.path.join(settings.DATA_DIR, "replay", f"{score_data['id']}.osr")
-    await state.http_client.download_file(
-        f"https://akatsuki.gg/web/replays/{score_data['id']}",
-        replay_path,
-        is_replay=True,
-    )
+    if not os.path.exists(replay_path):
+        await state.http_client.download_file(
+            f"https://akatsuki.gg/web/replays/{score_data['id']}",
+            replay_path,
+            is_replay=True,
+        )
 
     if not os.path.exists(replay_path):
         return "This replay does not exist!"
@@ -126,7 +127,7 @@ async def generate_normal_metadata(
     if not osz_file_path:
         return "Couldn't find this beatmapset!"
 
-    # TODO: Temponary use this parser until me and aesth will write one for aiosu.
+    # TODO: Temponary use this parser until me and aesth write one for aiosu.
     beatmap = Beatmap.from_path(osu_file_path)
 
     if not os.path.exists(
@@ -272,9 +273,9 @@ async def generate_normal_metadata(
 
     description = "\n".join(
         (
-            f"Player: https://akatsuki.gg/u/{score_data['user']['id']}?mode={replay_file.mode.id}&rx={relax}",
+            f"Player: https://akatsuki.gg/u/{score_data['user']['id']}",
             "Server: https://akatsuki.gg",
-            f"Map: https://akatsuki.gg/b/{score_data['beatmap']['beatmap_id']}?mode={replay_file.mode.id}&rx={relax}",
+            f"Map: https://akatsuki.gg/b/{score_data['beatmap']['beatmap_id']}",
             "",
             "Recorded by <nick of who recorded>",
             # "Thumbnail by <nick of who generated thumbnail>",
