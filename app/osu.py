@@ -25,7 +25,7 @@ async def download_osz_file(beatmapset_id: int) -> str:
     if os.path.exists(path):
         return path
 
-    url = f"https://catboy.best/d/{beatmapset_id}"
+    url = f"https://osu.direct/api/d/{beatmapset_id}"
 
     await state.http_client.download_file(url, path + ".zip")
 
