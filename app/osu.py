@@ -1,10 +1,17 @@
 from __future__ import annotations
 
+import glob
+
 import os
+import shutil
 import zipfile
 
 from app import settings
 from app import state
+
+
+def safe_name(s: str) -> str:
+    return s.lower().replace(" ", "_").strip()
 
 
 async def download_osu_file(beatmap_id: int) -> str:
@@ -32,6 +39,18 @@ async def download_osz_file(beatmapset_id: int) -> str:
     with zipfile.ZipFile(path + ".zip", "r") as zip_ref:
         zip_ref.extractall(path)
 
+    os.remove(path + ".zip")
+
+    # make sure all files are case sensitive to safe name
+    for item in glob.glob(path + "/**/*", recursive=True):
+        path_name = item.split("/")[-1]
+        safe_path_name = safe_name(path_name)
+
+        shutil.move(item, os.path.join(path, safe_path_name))
+
+        if path_name != safe_path_name:
+            os.remove(os.path.join(path, path_name))
+
     return path
 
 
@@ -54,7 +73,7 @@ def find_beatmap_background(beatmap_id: int, beatmapset_id: int) -> str:
         settings.DATA_DIR,
         "beatmap",
         str(beatmapset_id),
-        background_path,
+        safe_name(background_path),
     )
 
 
