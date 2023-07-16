@@ -48,9 +48,6 @@ async def download_osz_file(beatmapset_id: int) -> str:
 
         shutil.move(item, os.path.join(path, safe_path_name))
 
-        if path_name != safe_path_name:
-            os.remove(os.path.join(path, path_name))
-
     return path
 
 
