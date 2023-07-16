@@ -46,7 +46,15 @@ async def download_osz_file(beatmapset_id: int) -> str:
         path_name = item.split("/")[-1]
         safe_path_name = safe_name(path_name)
 
-        shutil.move(item, os.path.join(path, safe_path_name))
+        try:
+            shutil.move(item, os.path.join(path, safe_path_name))
+        except Exception:
+            rest_path = item.split("/" + path_name)[0]
+            safe_rest_path = safe_name(rest_path)
+            shutil.move(  # if not, cry.
+                os.path.join(safe_rest_path, path_name),
+                os.path.join(safe_rest_path, safe_path_name),
+            )
 
     return path
 
