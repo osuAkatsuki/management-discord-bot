@@ -11,7 +11,7 @@ from app import state
 
 
 def safe_name(s: str) -> str:
-    return s.lower().replace(" ", "_").strip()
+    return s.lower().strip().replace(" ", "_")
 
 
 async def download_osu_file(beatmap_id: int) -> str:
