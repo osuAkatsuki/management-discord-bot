@@ -1,25 +1,26 @@
 #!/usr/bin/env python3
 import base64
+import os
+import ssl
+import sys
 import textwrap
 from typing import Literal
 from urllib import parse
 
-import discord
-import ssl
-import sys
-import os
 import aiosu
-
+import discord
 from aiosu.models.mods import Mod
-from discord.ext import commands
 from discord import app_commands
+from discord.ext import commands
 
 # add .. to path
 srv_root = os.path.join(os.path.dirname(__file__), "..")
 
 sys.path.append(srv_root)
 
-from app import settings, views, scorewatch
+from app.common import views
+from app.usecases import scorewatch
+from app.common import settings
 from app.adapters import database
 from app.adapters import http
 from app.adapters import webdriver
@@ -182,7 +183,7 @@ async def genembed(
                         "URL to the player you are reporting, as well as the reason for your report. "
                         "The displayed form should guide you through all the necessary fields."
                     ),
-                )
+                ),
             ),
         )
         await channel.send(view=view, embed=embed)  # type: ignore
@@ -288,12 +289,12 @@ async def request(
             f"""\
                 ▸ Player: [{score_data['user']['username']}](https://akatsuki.gg/u/{score_data['user']['id']})
                 ▸ Map: [{score_data['beatmap']['song_name']}](https://akatsuki.gg/b/{score_data['beatmap']['beatmap_id']})
-            """
+            """,
         ),
         inline=False,
     )
     thread_starter_message_embed.set_footer(
-        text="🔽 For specific details see the thread 🔽"
+        text="🔽 For specific details see the thread 🔽",
     )
 
     thread_starter_message = await channel.send(embed=thread_starter_message_embed)  # type: ignore
@@ -395,7 +396,9 @@ async def generate(
     replay_path = os.path.join(settings.DATA_DIR, "replay", f"{score_id}.osr")
     if not os.path.exists(replay_path):
         await state.http_client.download_file(
-            f"https://akatsuki.gg/web/replays/{score_id}", replay_path, is_replay=True
+            f"https://akatsuki.gg/web/replays/{score_id}",
+            replay_path,
+            is_replay=True,
         )
 
     if not os.path.exists(replay_path):

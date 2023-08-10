@@ -1,7 +1,7 @@
-from app import state
-
-from typing import TypedDict
 from typing import cast
+from typing import TypedDict
+
+from app import state
 
 
 class Performance(TypedDict):

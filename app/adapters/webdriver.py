@@ -1,6 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.remote.file_detector import LocalFileDetector
-import settings
+
+from app.common import settings
 
 
 # Selenium is little weird so we need to make a class to handle all this weirdness

@@ -1,13 +1,18 @@
 import datetime
 import textwrap
 from urllib import parse
+
 import discord
-
-from app import scorewatch, settings
-
 from discord.ext import commands
-from app.constants import Status, VoteType
-from app.repositories import scores, sw_requests, sw_votes, users
+
+from app.usecases import scorewatch
+from app.common import settings
+from app.constants import Status
+from app.constants import VoteType
+from app.repositories import scores
+from app.repositories import sw_requests
+from app.repositories import sw_votes
+from app.repositories import users
 
 
 class ReportForm(discord.ui.Modal):
@@ -43,7 +48,7 @@ class ReportForm(discord.ui.Modal):
                     """\
                     You must provide a valid Akatsuki profile URL.
                     Valid syntax: `https://akatsuki.gg/u/999`
-                    """
+                    """,
                 ),
                 ephemeral=True,
             )
@@ -94,7 +99,9 @@ class ReportView(discord.ui.View):
         super().__init__(timeout=None)
 
     @discord.ui.button(
-        label="Click Here!", style=discord.ButtonStyle.primary, custom_id="report"
+        label="Click Here!",
+        style=discord.ButtonStyle.primary,
+        custom_id="report",
     )
     async def report(
         self,
@@ -146,7 +153,8 @@ class ScorewatchVoteButton(discord.ui.Button):
             return
 
         prev_vote = await sw_votes.fetch_one(
-            request_data["request_id"], interaction.user.id
+            request_data["request_id"],
+            interaction.user.id,
         )
         if prev_vote:
             await interaction.followup.send(
@@ -194,7 +202,7 @@ class ScorewatchVoteButton(discord.ui.Button):
         )
 
         old_thread_msg = await interaction.channel.fetch_message(
-            request_data["thread_message_id"]
+            request_data["thread_message_id"],
         )
         await old_thread_msg.edit(content=msg_content)
         await interaction.followup.send(
@@ -220,7 +228,8 @@ class ScorewatchVoteButton(discord.ui.Button):
         )
 
         score_data = await scores.fetch_one(
-            request_data["score_id"], request_data["score_relax"]
+            request_data["score_id"],
+            request_data["score_relax"],
         )
 
         if not score_data:
@@ -230,7 +239,10 @@ class ScorewatchVoteButton(discord.ui.Button):
             return
 
         updated_embed = await scorewatch.format_request_embed(
-            self.bot, score_data, request_data, status
+            self.bot,
+            score_data,
+            request_data,
+            status,
         )
         if isinstance(updated_embed, str):
             await interaction.channel.send(updated_embed)

@@ -1,5 +1,4 @@
 from datetime import datetime
-
 from typing import cast
 from typing import TypedDict
 
@@ -7,9 +6,9 @@ from app import state
 from app.constants import VoteType
 
 READ_PARAMS = """\
-    request_id, 
-    vote_user_id, 
-    vote_type, 
+    request_id,
+    vote_user_id,
+    vote_type,
     created_at
 """
 
@@ -42,7 +41,7 @@ async def create(
 
 async def fetch_one(request_id: int, vote_user_id: int) -> ScorewatchVote | None:
     query = f"""\
-        SELECT {READ_PARAMS} 
+        SELECT {READ_PARAMS}
         FROM scorewatch_votes
         WHERE request_id = :request_id
         AND vote_user_id = :vote_user_id
@@ -62,7 +61,7 @@ async def fetch_one(request_id: int, vote_user_id: int) -> ScorewatchVote | None
 
 async def fetch_all(request_id: int, vote_type: VoteType) -> list[ScorewatchVote]:
     query = f"""\
-        SELECT {READ_PARAMS} 
+        SELECT {READ_PARAMS}
         FROM scorewatch_votes
         WHERE request_id = :request_id
         AND vote_type = :vote_type
