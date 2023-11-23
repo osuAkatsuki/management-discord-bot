@@ -26,6 +26,24 @@ async def download_osu_file(beatmap_id: int) -> str:
     return path
 
 
+def parse_osu_file_manually(path: str) -> dict[str, str]:
+    with open(path, encoding="utf-8-sig") as f:
+        lines = f.readlines()
+
+    beatmap = {}
+    for line in lines[1:]:
+        if line.startswith("Artist:"):
+            beatmap["artist"] = line.split(":")[1].strip()
+        elif line.startswith("Title:"):
+            beatmap["title"] = line.split(":")[1].strip()
+        elif line.startswith("Creator:"):
+            beatmap["creator"] = line.split(":")[1].strip()
+        elif line.startswith("Version:"):
+            beatmap["version"] = line.split(":")[1].strip()
+
+    return beatmap
+
+
 async def try_download_osz_file(beatmap_id: int, path: str) -> bool:
     mirrors = [
         "https://chimu.moe/d/",

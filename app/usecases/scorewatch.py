@@ -129,7 +129,18 @@ async def generate_normal_metadata(
         return "Couldn't find this beatmapset!"
 
     # TODO: Temponary use this parser until me and aesth write one for aiosu.
-    beatmap = Beatmap.from_path(osu_file_path)
+    try:
+        beatmap = Beatmap.from_path(osu_file_path)
+        beatmap_artist = beatmap.artist
+        beatmap_title = beatmap.title
+        beatmap_difficulty_name = beatmap.version
+        map_full_combo = typing.cast(int, beatmap.max_combo)
+    except Exception:  # When this happens, it's probably a mania map.
+        beatmap = osu.parse_osu_file_manually(osu_file_path)
+        beatmap_artist = beatmap["artist"]
+        beatmap_title = beatmap["title"]
+        beatmap_difficulty_name = beatmap["version"]
+        map_full_combo = 0
 
     if not os.path.exists(
         os.path.join(
@@ -158,26 +169,25 @@ async def generate_normal_metadata(
             ),
         )
 
-    map_full_combo = typing.cast(int, beatmap.max_combo)
     if not detail_text and not detail_colour:
         detail_text, detail_colour = calculate_detail_text_and_colour(score_data)
 
     if not artist:
-        artist = beatmap.artist
+        artist = beatmap_artist
 
     if not title:
-        title = beatmap.title
+        title = beatmap_title
 
     if not difficulty_name:
-        difficulty_name = beatmap.version
+        difficulty_name = beatmap_difficulty_name
 
     if not username:
         username = score_data["user"]["username"]
 
     with open(os.path.join("templates", "scorewatch_normal.html")) as f:
-        tempalate = f.read()
+        template = f.read()
 
-    tempalate = tempalate.replace(
+    template = template.replace(
         r"<% bg-image %>",
         (
             "/bot-data"  # mounted in docker; DON'T TOUCH
@@ -189,21 +199,31 @@ async def generate_normal_metadata(
             + f"{score_data['beatmap']['beatmap_id']}_normal.png"
         ),
     )
-    tempalate = tempalate.replace(r"<% misc-colour %>", detail_colour)  # type: ignore
-    tempalate = tempalate.replace(r"<% title-colour %>", title_colour)
-    tempalate = tempalate.replace(r"<% username %>", username)
-    tempalate = tempalate.replace(r"<% mode %>", mode_icon)
-    tempalate = tempalate.replace(r"<% country %>", score_data["user"]["country"])
-    tempalate = tempalate.replace(r"<% userid %>", str(score_data["user"]["id"]))
-    tempalate = tempalate.replace(r"<% artist %>", artist)  # type: ignore
-    tempalate = tempalate.replace(r"<% title %>", title)  # type: ignore
-    tempalate = tempalate.replace(r"<% map-diff %>", difficulty_name)  # type: ignore
-    tempalate = tempalate.replace(r"<% mods %>", f"+{replay_file.mods}")
-    tempalate = tempalate.replace(r"<% combo %>", str(replay_file.max_combo))
-    tempalate = tempalate.replace(r"<% max-combo %>", str(map_full_combo))
-    tempalate = tempalate.replace(r"<% pp-val %>", str(int(score_data["pp"])))
-    tempalate = tempalate.replace(r"<% acc %>", f"{score_data['accuracy']:.2f}")
-    tempalate = tempalate.replace(r"<% misc-text %>", detail_text)  # type: ignore
+    template = template.replace(r"<% misc-colour %>", detail_colour)  # type: ignore
+    template = template.replace(r"<% title-colour %>", title_colour)
+    template = template.replace(r"<% username %>", username)
+    template = template.replace(r"<% mode %>", mode_icon)
+    template = template.replace(r"<% country %>", score_data["user"]["country"])
+    template = template.replace(r"<% userid %>", str(score_data["user"]["id"]))
+    template = template.replace(r"<% artist %>", artist)  # type: ignore
+    template = template.replace(r"<% title %>", title)  # type: ignore
+    template = template.replace(r"<% map-diff %>", difficulty_name)  # type: ignore
+    template = template.replace(r"<% mods %>", f"+{replay_file.mods}")
+
+    if map_full_combo > 0:
+        template = template.replace(
+            r"<% combo %>",
+            f"{replay_file.max_combo}x/{map_full_combo}x",
+        )
+    else:
+        template = template.replace(
+            r"<% combo %>",
+            f"{replay_file.score:,} ({replay_file.max_combo}x)",
+        )
+
+    template = template.replace(r"<% pp-val %>", str(int(score_data["pp"])))
+    template = template.replace(r"<% acc %>", f"{score_data['accuracy']:.2f}")
+    template = template.replace(r"<% misc-text %>", detail_text)  # type: ignore
 
     with open(
         os.path.join(
@@ -214,7 +234,7 @@ async def generate_normal_metadata(
         ),
         "w",
     ) as f:
-        f.write(tempalate)
+        f.write(template)
 
     url = os.path.join(
         "/bot-data",  # mounted in docker; DON'T TOUCH
