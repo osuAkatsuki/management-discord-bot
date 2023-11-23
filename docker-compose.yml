@@ -11,8 +11,8 @@ services:
       POSTGRES_PASSWORD: ${WRITE_DB_PASS}
     volumes:
       - ./pgdata:/var/lib/postgresql/data
-    ports:
-      - 5432:5432
+    # ports:
+    #   - 5432:5432
 
   selenium:
     image: selenium/standalone-chrome:latest

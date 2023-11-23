@@ -5,6 +5,8 @@ import os
 import shutil
 import zipfile
 
+from typing import Optional
+
 from app import state
 from app.common import settings
 
@@ -25,35 +27,63 @@ async def download_osu_file(beatmap_id: int) -> str:
     return path
 
 
-async def download_osz_file(beatmapset_id: int) -> str:
+async def try_download_osz_file(beatmap_id: int, path: str) -> bool:
+    mirrors = [
+        "https://chimu.moe/d/",
+        "https://api.osu.direct/d/",
+        "https://catboy.best/d/",
+    ]
+
+    for mirror in mirrors:
+        try:
+            await state.http_client.download_file(
+                mirror + str(beatmap_id), path + ".zip"
+            )
+        except Exception as e:
+            continue
+
+        if os.path.getsize(path + ".zip") > 0:
+            return True
+
+        os.remove(path + ".zip")
+
+    return False
+
+
+async def download_osz_file(beatmapset_id: int) -> Optional[str]:
     path = os.path.join(settings.DATA_DIR, "beatmap", str(beatmapset_id))
 
     if os.path.exists(path):
         return path
 
-    url = f"https://osu.direct/api/d/{beatmapset_id}"
-
-    await state.http_client.download_file(url, path + ".zip")
+    success = await try_download_osz_file(beatmapset_id, path)
+    if not success:
+        return None
 
     with zipfile.ZipFile(path + ".zip", "r") as zip_ref:
         zip_ref.extractall(path)
 
     os.remove(path + ".zip")
 
-    # make sure all files are case sensitive to safe name
-    for item in glob.glob(path + "/**/*", recursive=True):
-        path_name = item.split("/")[-1]
+    # make sure all folders are lowercase
+    for item in glob.glob(path + "/**/", recursive=True):
+        path_name = item.split("/")[-1]  # /sb/(f)
         safe_path_name = safe_name(path_name)
 
-        try:
-            shutil.move(item, os.path.join(path, safe_path_name))
-        except Exception:
-            rest_path = item.split("/" + path_name)[0]
-            safe_rest_path = safe_name(rest_path)
-            shutil.move(  # if not, cry.
-                os.path.join(safe_rest_path, path_name),
-                os.path.join(safe_rest_path, safe_path_name),
-            )
+        if path_name == safe_path_name:
+            continue
+
+        shutil.move(item, os.path.join(path, safe_path_name))
+
+    # make sure all files are lowercase
+    for item in glob.glob(path + "/**/*.*", recursive=True):
+        path_name = item.split("/")[-1]  # /sb/f/(file.png)
+        safe_path_name = safe_name(path_name)
+
+        if path_name == safe_path_name:
+            continue
+
+        shutil.move(item, os.path.join(path, safe_path_name))
 
     return path
 
