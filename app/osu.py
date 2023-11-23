@@ -4,7 +4,6 @@ import glob
 import os
 import shutil
 import zipfile
-
 from typing import Optional
 
 from app import state
@@ -37,7 +36,8 @@ async def try_download_osz_file(beatmap_id: int, path: str) -> bool:
     for mirror in mirrors:
         try:
             await state.http_client.download_file(
-                mirror + str(beatmap_id), path + ".zip"
+                mirror + str(beatmap_id),
+                path + ".zip",
             )
         except Exception as e:
             continue

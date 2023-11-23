@@ -9,7 +9,6 @@ from discord.ext import commands
 from slider import Beatmap
 
 from app import osu
-from app.usecases import postprocessing
 from app import state
 from app.common import settings
 from app.constants import DetailTextColour
@@ -17,6 +16,7 @@ from app.constants import Status
 from app.repositories import performance
 from app.repositories.scores import Score
 from app.repositories.sw_requests import ScorewatchRequest
+from app.usecases import postprocessing
 
 
 def get_title_colour(relax: int) -> str:

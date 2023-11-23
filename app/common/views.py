@@ -5,7 +5,6 @@ from urllib import parse
 import discord
 from discord.ext import commands
 
-from app.usecases import scorewatch
 from app.common import settings
 from app.constants import Status
 from app.constants import VoteType
@@ -13,6 +12,7 @@ from app.repositories import scores
 from app.repositories import sw_requests
 from app.repositories import sw_votes
 from app.repositories import users
+from app.usecases import scorewatch
 
 
 class ReportForm(discord.ui.Modal):
