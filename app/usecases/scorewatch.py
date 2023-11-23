@@ -267,9 +267,11 @@ async def generate_normal_metadata(
         return "Couldn't find performance data for this score!"
 
     song_name = f"{artist} - {title} [{difficulty_name}]"
+    title_detail_text = detail_text.replace("xMiss", "❌")  # type: ignore
+
     title = (
         f"[{performance_data['stars']:.2f} ⭐] {relax_text} | {username} | "
-        f"{song_name} +{replay_file.mods} {score_data['accuracy']:.2f}% {int(performance_data['pp'])}pp {detail_text}"
+        f"{song_name} +{replay_file.mods} {score_data['accuracy']:.2f}% {int(performance_data['pp'])}pp {title_detail_text}"
     )
 
     description = "\n".join(
@@ -278,9 +280,9 @@ async def generate_normal_metadata(
             "Server: https://akatsuki.gg",
             f"Map: https://akatsuki.gg/b/{score_data['beatmap']['beatmap_id']}",
             "",
-            "Recorded by <recorder nick>",
-            # "Thumbnail by <nick of who generated thumbnail>",
-            "Uploaded by <uploader nick>",
+            "Recorded by <>",
+            # "Thumbnail by <>",
+            "Uploaded by <>",
             "------------------",
             "Akatsuki is an osu! private server, featuring a normal and relax server with many active users! Join our discord here! https://akatsuki.gg/discord",
         ),

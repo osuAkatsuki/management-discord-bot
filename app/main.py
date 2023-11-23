@@ -322,8 +322,13 @@ async def request(
 
                 **Remember you can only vote once!**
 
-                **Vote with the reactions below!**
+                **Vote with the buttons below!**
                 **0**/{len(users_mentions)} voted!
+
+                Votes to accept:
+
+                Votes to deny:
+
                 List of people left to vote:
                 {', '.join(users_mentions)}
             """,

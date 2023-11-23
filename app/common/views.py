@@ -188,14 +188,22 @@ class ScorewatchVoteButton(discord.ui.Button):
             if user_id not in all_votes:
                 left_to_vote.add(user_mention)
 
+        accepted_mentions = [users_mentions[user["vote_user_id"]] for user in upvotes]
+        denied_mentions = [users_mentions[user["vote_user_id"]] for user in downvotes]
+
         msg_content = textwrap.dedent(
             f"""\
                 Hey, <@&{settings.AKATSUKI_SCOREWATCH_ROLE_ID}>! A new upload request has been submitted.
 
                 **Remember you can only vote once!**
 
-                **Vote with the reactions below!**
+                **Vote with the buttons below!**
                 **{len(all_votes)}**/{len(users_mentions)} voted!
+
+                Votes to accept:
+                {', '.join(accepted_mentions)}
+                Votes to deny:
+                {', '.join(denied_mentions)}
                 List of people left to vote:
                 {', '.join(left_to_vote)}
             """,
@@ -253,7 +261,7 @@ class ScorewatchVoteButton(discord.ui.Button):
         await interaction.channel.send(
             textwrap.dedent(
                 f"""\
-                    All votes have been casted and the request has been closed!
+                    All votes have been cast and the request has been closed!
                     The request has been marked as **{status}**!
                 """,
             ),
@@ -265,7 +273,7 @@ class ScorewatchVoteButton(discord.ui.Button):
         if status == Status.TIED:
             await interaction.channel.send(
                 "The request was tied, so it should be manually resolved "
-                f"by <@&{settings.AKATSUKI_SCOREWATCH_ROLE_ID}> members!",
+                f"by <@&{settings.AKATSUKI_SCOREWATCH_ROLE_ID}> members.",
             )
             return
 
