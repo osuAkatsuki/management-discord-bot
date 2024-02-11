@@ -12,7 +12,7 @@ class HTTPClient(AsyncClient):
         if file_data.status_code != 200 or not file_data.content:
             return
 
-        if is_replay and len(file_data.content) < 16:
+        if is_replay and len(file_data.content) < 100:
             return
 
         with open(path, "wb") as f:

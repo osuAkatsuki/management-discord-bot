@@ -26,6 +26,16 @@ def get_title_colour(relax: int) -> str:
         2: "#c5ff96",
     }[relax]
 
+RELAX_OFFSET = 500000000
+AP_OFFSET = 6148914691236517204
+
+def get_relax_from_score_id(score_id: int) -> int:
+    if score_id < RELAX_OFFSET:
+        return 1
+    elif score_id >= AP_OFFSET:
+        return 2
+
+    return 0
 
 def calculate_detail_text_and_colour(score_data: Score) -> tuple[str, str]:
     detail_text = "FC"
@@ -103,21 +113,18 @@ async def generate_normal_metadata(
             is_replay=True,
         )
 
-    if not os.path.exists(replay_path):
-        return "This replay does not exist!"
+    #if not os.path.exists(replay_path):
+    #    return "This replay does not exist!"
 
-    replay_file = aiosu.utils.replay.parse_path(replay_path)
-
-    relax = 0
+    relax = get_relax_from_score_id(int(score_data["id"]))
     relax_text = "Vanilla"
-    if replay_file.mods & Mod.Relax:
-        relax = 1
+    if relax == 1:
         relax_text = "Relax"
-    elif replay_file.mods & Mod.Autopilot:
-        relax = 2
+    elif relax == 2:
         relax_text = "Autopilot"
 
-    mode_icon = osu.int_to_osu_name(replay_file.mode.value)
+    mods = aiosu.models.mods.Mods(score_data["mods"])
+    mode_icon = osu.int_to_osu_name(score_data["play_mode"])
     title_colour = get_title_colour(relax)
 
     osu_file_path = await osu.download_osu_file(score_data["beatmap"]["beatmap_id"])
@@ -208,17 +215,17 @@ async def generate_normal_metadata(
     template = template.replace(r"<% artist %>", artist)  # type: ignore
     template = template.replace(r"<% title %>", title)  # type: ignore
     template = template.replace(r"<% map-diff %>", difficulty_name)  # type: ignore
-    template = template.replace(r"<% mods %>", f"+{replay_file.mods}")
+    template = template.replace(r"<% mods %>", f"+{mods}")
 
     if map_full_combo > 0:
         template = template.replace(
             r"<% combo %>",
-            f"{replay_file.max_combo}x/{map_full_combo}x",
+            f"{score_data['max_combo']}x/{map_full_combo}x",
         )
     else:
         template = template.replace(
             r"<% combo %>",
-            f"{replay_file.score:,} ({replay_file.max_combo}x)",
+            f"{score_data['score']:,} ({score_data['max_combo']}x)",
         )
 
     template = template.replace(r"<% pp-val %>", str(int(score_data["pp"])))
@@ -276,11 +283,11 @@ async def generate_normal_metadata(
 
     performance_data = await performance.fetch_one(
         score_data["beatmap"]["beatmap_id"],
-        replay_file.mode.id,
-        int(replay_file.mods),
-        replay_file.max_combo,
+        score_data["play_mode"],
+        score_data["mods"],
+        score_data["max_combo"],
         score_data["accuracy"],
-        replay_file.statistics.count_miss,
+        score_data["count_miss"],
     )
 
     if not performance_data:
@@ -291,7 +298,7 @@ async def generate_normal_metadata(
 
     title = (
         f"[{performance_data['stars']:.2f} ⭐] {relax_text} | {username} | "
-        f"{song_name} +{replay_file.mods} {score_data['accuracy']:.2f}% {int(performance_data['pp'])}pp {title_detail_text}"
+        f"{song_name} +{mods} {score_data['accuracy']:.2f}% {int(performance_data['pp'])}pp {title_detail_text}"
     )
 
     description = "\n".join(

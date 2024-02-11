@@ -50,7 +50,6 @@ def check_folder(path: str) -> None:
     if not os.path.exists(path):
         os.mkdir(path)
 
-
 class Bot(commands.Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(
@@ -398,6 +397,7 @@ async def generate(
         )
         return
 
+    # TODO: is this even needed now?
     replay_path = os.path.join(settings.DATA_DIR, "replay", f"{score_id}.osr")
     if not os.path.exists(replay_path):
         await state.http_client.download_file(
@@ -406,21 +406,7 @@ async def generate(
             is_replay=True,
         )
 
-    if not os.path.exists(replay_path):
-        await interaction.followup.send(
-            "This replay does not exist!",
-            ephemeral=True,
-        )
-        return
-
-    replay_file = aiosu.utils.replay.parse_path(replay_path)
-
-    relax = 0
-    if replay_file.mods & Mod.Relax:
-        relax = 1
-    elif replay_file.mods & Mod.Autopilot:
-        relax = 2
-
+    relax = scorewatch.get_relax_from_score_id(int(score_id))
     score_data = await scores.fetch_one(int(score_id), relax)
     if not score_data:
         await interaction.followup.send(
