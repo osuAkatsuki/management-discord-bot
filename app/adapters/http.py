@@ -3,8 +3,10 @@ from httpx import AsyncClient
 
 class HTTPClient(AsyncClient):
     async def download_file(self, url: str, path: str, is_replay: bool = False) -> None:
+        headers = {"user-agent": "akatsuki/management-bot"}
         file_data = await self.get(
             url,
+            headers=headers,
             timeout=60,
             follow_redirects=True,
         )  # temporary fix for random timeouts
