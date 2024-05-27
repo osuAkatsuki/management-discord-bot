@@ -2,7 +2,7 @@
 
 build: # build all containers
 	if [ -d "pgdata" ]; then sudo chmod -R 755 pgdata; fi
-	docker build -t management-discord-bot:latest -t management-discord-bot:latest .
+	docker build -t management-discord-bot:latest .
 
 run-bg: # run all containers in the background
 	docker-compose up -d \
