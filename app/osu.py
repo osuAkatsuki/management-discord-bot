@@ -1,10 +1,6 @@
 from __future__ import annotations
 
-import glob
 import os
-import shutil
-import zipfile
-from typing import Optional
 
 from app import state
 from app.common import settings
@@ -12,18 +8,6 @@ from app.common import settings
 
 def safe_name(s: str) -> str:
     return s.lower().strip().replace(" ", "_")
-
-
-async def download_osu_file(beatmap_id: int) -> str:
-    path = os.path.join(settings.DATA_DIR, "beatmap", f"{beatmap_id}.osu")
-
-    if os.path.exists(path):
-        return path
-
-    url = f"https://osu.ppy.sh/osu/{beatmap_id}"
-
-    await state.http_client.download_file(url, path)
-    return path
 
 
 def parse_beatmap_metadata_from_file_data(file_data: bytes) -> dict[str, str]:
@@ -40,35 +24,6 @@ def parse_beatmap_metadata_from_file_data(file_data: bytes) -> dict[str, str]:
             beatmap["version"] = line.split(":")[1].strip()
 
     return beatmap
-
-
-async def try_download_osz_file(beatmap_id: int, path: str) -> bool:
-    mirrors = [
-        "https://chimu.moe/d/",
-        "https://api.osu.direct/d/",
-        "https://catboy.best/d/",
-    ]
-
-    for mirror in mirrors:
-        try:
-            await state.http_client.download_file(
-                mirror + str(beatmap_id),
-                path + ".zip",
-            )
-        except Exception as e:
-            continue
-
-        if not os.path.exists(path + ".zip"):
-            continue
-
-        if os.path.getsize(path + ".zip") < 100:  # safe number
-            os.remove(path + ".zip")
-            continue
-
-    if not os.path.exists(path + ".zip"):
-        return False
-
-    return True
 
 
 def find_beatmap_background_filename(beatmap_id: int, beatmapset_id: int) -> str:

@@ -5,6 +5,7 @@ import typing
 
 import aiosu
 import discord
+from app import state, webdriver
 from discord.ext import commands
 
 from app import osu
@@ -15,6 +16,7 @@ from app.constants import Status
 from app.repositories import performance
 from app.repositories.scores import Score
 from app.repositories.sw_requests import ScorewatchRequest
+from app.usecases import postprocessing
 
 
 def get_title_colour(relax: int) -> str:
@@ -148,11 +150,15 @@ async def generate_score_upload_resources(
         beatmap_difficulty_name = beatmap_metadata["version"]
         map_full_combo = 0
 
-    beatmap_background_image_data = (
-        await osu_beatmaps.get_beatmap_background_image_data(beatmapset_id)
+    beatmap_background_image = (
+        await osu_beatmaps.get_beatmap_background_image(beatmapset_id)
     )
-    if not beatmap_background_image_data:
+    if not beatmap_background_image:
         return "Couldn't find this beatmap!"
+
+    beatmap_background_image = postprocessing.apply_effects_normal_template(
+        beatmap_background_image,
+    )
 
     if not detail_text and not detail_colour:
         detail_text, detail_colour = calculate_detail_text_and_colour(score_data)
@@ -210,28 +216,11 @@ async def generate_score_upload_resources(
     template = template.replace(r"<% acc %>", f"{score_data['accuracy']:.2f}")
     template = template.replace(r"<% misc-text %>", detail_text)  # type: ignore
 
-    from app import html_to_image
-
-    image = html_to_image.render_html_as_image(
-        template,
-        output_image_size=(1920, 1080),
-    )
-    image = image.convert("RGB")
-
-    with io.BytesIO() as image_buffer:
-        image.save(
-            image_buffer,
-            format="JPEG",
-            subsampling=0,
-            quality=100,
-        )
-
-        image_buffer.seek(0)
-        image_data = image_buffer.read()
+    thumbnail_image_data = state.webdriver.capture_html_as_jpeg_image(template)
 
     await aws_s3.save_object_data(
         f"/scorewatch/thumbnails/{beatmap_id}_{user_id}_score.jpg",
-        image_data,
+        thumbnail_image_data,
     )
 
     performance_data = await performance.fetch_one(
@@ -271,5 +260,5 @@ async def generate_score_upload_resources(
     return {
         "title": title,
         "description": description,
-        "image_data": image_data,
+        "image_data": thumbnail_image_data,
     }
