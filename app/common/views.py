@@ -1,4 +1,5 @@
 import datetime
+import io
 import textwrap
 from urllib import parse
 
@@ -282,27 +283,25 @@ class ScorewatchVoteButton(discord.ui.Button):
         )
 
         async with interaction.channel.typing():
-            metadata = await scorewatch.generate_normal_metadata(score_data)
+            upload_data = await scorewatch.generate_score_upload_resources(score_data)
 
-            if isinstance(metadata, str):
-                await interaction.channel.send(metadata)
+            if isinstance(upload_data, str):
+                await interaction.channel.send(upload_data)
                 return
 
             await interaction.channel.send(
                 "\n".join(
                     (
                         "**Title:**",
-                        f"```{metadata['title']}```",
+                        f"```{upload_data['title']}```",
                         "",
                         "**Description:**",
-                        f"```{metadata['description']}```",
+                        f"```{upload_data['description']}```",
                         "",
                         "**Thumbnail:**",
                     ),
                 ),
-                file=discord.File(
-                    metadata["file"],
-                ),
+                file=discord.File(io.BytesIO(upload_data["image_data"])),
             )
 
 

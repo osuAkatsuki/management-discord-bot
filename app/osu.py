@@ -26,10 +26,8 @@ async def download_osu_file(beatmap_id: int) -> str:
     return path
 
 
-def parse_osu_file_manually(path: str) -> dict[str, str]:
-    with open(path, encoding="utf-8-sig") as f:
-        lines = f.readlines()
-
+def parse_beatmap_metadata_from_file_data(file_data: bytes) -> dict[str, str]:
+    lines = file_data.decode().splitlines()
     beatmap = {}
     for line in lines[1:]:
         if line.startswith("Artist:"):
@@ -63,7 +61,7 @@ async def try_download_osz_file(beatmap_id: int, path: str) -> bool:
         if not os.path.exists(path + ".zip"):
             continue
 
-        if os.path.getsize(path + ".zip") < 100: # safe number
+        if os.path.getsize(path + ".zip") < 100:  # safe number
             os.remove(path + ".zip")
             continue
 
@@ -73,45 +71,7 @@ async def try_download_osz_file(beatmap_id: int, path: str) -> bool:
     return True
 
 
-async def download_osz_file(beatmapset_id: int) -> Optional[str]:
-    path = os.path.join(settings.DATA_DIR, "beatmap", str(beatmapset_id))
-
-    if os.path.exists(path):
-        return path
-
-    success = await try_download_osz_file(beatmapset_id, path)
-    if not success:
-        return None
-
-    with zipfile.ZipFile(path + ".zip", "r") as zip_ref:
-        zip_ref.extractall(path)
-
-    os.remove(path + ".zip")
-
-    # make sure all folders are lowercase
-    for item in glob.glob(path + "/**/", recursive=True):
-        path_name = item.split("/")[-1]  # /sb/(f)
-        safe_path_name = safe_name(path_name)
-
-        if path_name == safe_path_name:
-            continue
-
-        shutil.move(item, os.path.join(path, safe_path_name))
-
-    # make sure all files are lowercase
-    for item in glob.glob(path + "/**/*.*", recursive=True):
-        path_name = item.split("/")[-1]  # /sb/f/(file.png)
-        safe_path_name = safe_name(path_name)
-
-        if path_name == safe_path_name:
-            continue
-
-        shutil.move(item, os.path.join(path, safe_path_name))
-
-    return path
-
-
-def find_beatmap_background(beatmap_id: int, beatmapset_id: int) -> str:
+def find_beatmap_background_filename(beatmap_id: int, beatmapset_id: int) -> str:
     background_path = ""
     osu_file_path = os.path.join(settings.DATA_DIR, "beatmap", f"{beatmap_id}.osu")
 
@@ -126,12 +86,7 @@ def find_beatmap_background(beatmap_id: int, beatmapset_id: int) -> str:
             background_path = line.split(",")[2].strip().strip('"')
             break
 
-    return os.path.join(
-        settings.DATA_DIR,
-        "beatmap",
-        str(beatmapset_id),
-        safe_name(background_path),
-    )
+    return safe_name(background_path)
 
 
 def to_osu_mode_readable(mode: int) -> str:

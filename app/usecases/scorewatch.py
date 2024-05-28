@@ -1,22 +1,20 @@
 import datetime
+import io
 import os
 import typing
 
 import aiosu
 import discord
-from aiosu.models.mods import Mod
 from discord.ext import commands
-from slider import Beatmap
 
 from app import osu
-from app import state
-from app.common import settings
+from app import osu_beatmaps
+from app.adapters import aws_s3
 from app.constants import DetailTextColour
 from app.constants import Status
 from app.repositories import performance
 from app.repositories.scores import Score
 from app.repositories.sw_requests import ScorewatchRequest
-from app.usecases import postprocessing
 
 
 def get_title_colour(relax: int) -> str:
@@ -26,8 +24,10 @@ def get_title_colour(relax: int) -> str:
         2: "#c5ff96",
     }[relax]
 
+
 RELAX_OFFSET = 500000000
 AP_OFFSET = 6148914691236517204
+
 
 def get_relax_from_score_id(score_id: int) -> int:
     if score_id < RELAX_OFFSET:
@@ -36,6 +36,7 @@ def get_relax_from_score_id(score_id: int) -> int:
         return 2
 
     return 0
+
 
 def calculate_detail_text_and_colour(score_data: Score) -> tuple[str, str]:
     detail_text = "FC"
@@ -96,7 +97,13 @@ async def format_request_embed(
     return embed
 
 
-async def generate_normal_metadata(
+class ScoreUploadResources(typing.TypedDict):
+    title: str
+    description: str
+    image_data: bytes
+
+
+async def generate_score_upload_resources(
     score_data: Score,
     username: str | None = None,
     artist: str | None = None,
@@ -104,18 +111,7 @@ async def generate_normal_metadata(
     difficulty_name: str | None = None,
     detail_text: str | None = None,
     detail_colour: str | None = None,
-) -> dict[str, str] | str:
-    replay_path = os.path.join(settings.DATA_DIR, "replay", f"{score_data['id']}.osr")
-    if not os.path.exists(replay_path):
-        await state.http_client.download_file(
-            f"https://akatsuki.gg/web/replays/{score_data['id']}",
-            replay_path,
-            is_replay=True,
-        )
-
-    #if not os.path.exists(replay_path):
-    #    return "This replay does not exist!"
-
+) -> ScoreUploadResources | str:
     relax = get_relax_from_score_id(int(score_data["id"]))
     relax_text = "Vanilla"
     if relax == 1:
@@ -127,54 +123,36 @@ async def generate_normal_metadata(
     mode_icon = osu.int_to_osu_name(score_data["play_mode"])
     title_colour = get_title_colour(relax)
 
-    osu_file_path = await osu.download_osu_file(score_data["beatmap"]["beatmap_id"])
-    if not osu_file_path:
-        return "Couldn't find this beatmap!"
+    user_id = score_data["user"]["id"]
 
-    osz_file_path = await osu.download_osz_file(score_data["beatmap"]["beatmapset_id"])
-    if not osz_file_path:
-        return "Couldn't find this beatmapset!"
+    beatmap_id = score_data["beatmap"]["beatmap_id"]
+    beatmapset_id = score_data["beatmap"]["beatmapset_id"]
 
-    # TODO: Temponary use this parser until me and aesth write one for aiosu.
-    try:
-        beatmap = Beatmap.from_path(osu_file_path)
+    beatmap = await osu_beatmaps.get_beatmap(beatmap_id)
+    if beatmap:
         beatmap_artist = beatmap.artist
         beatmap_title = beatmap.title
         beatmap_difficulty_name = beatmap.version
         map_full_combo = typing.cast(int, beatmap.max_combo)
-    except Exception:  # When this happens, it's probably a mania map.
-        beatmap = osu.parse_osu_file_manually(osu_file_path)
-        beatmap_artist = beatmap["artist"]
-        beatmap_title = beatmap["title"]
-        beatmap_difficulty_name = beatmap["version"]
+    else:
+        # NOTE: aiosu has some issues with parsing mania maps.
+        # We're using this as a temporary workaround until the
+        # issues have been fixed in the source.
+        beatmap_data = await aws_s3.get_object_data(f"/beatmaps/{beatmap_id}.osu")
+        if not beatmap_data:
+            return "Couldn't find this beatmap!"
+
+        beatmap_metadata = osu.parse_beatmap_metadata_from_file_data(beatmap_data)
+        beatmap_artist = beatmap_metadata["artist"]
+        beatmap_title = beatmap_metadata["title"]
+        beatmap_difficulty_name = beatmap_metadata["version"]
         map_full_combo = 0
 
-    if not os.path.exists(
-        os.path.join(
-            settings.DATA_DIR,
-            "finals",
-            "backgrounds",
-            f"{score_data['beatmap']['beatmap_id']}_normal.png",
-        ),
-    ):
-        background_image = osu.find_beatmap_background(
-            score_data["beatmap"]["beatmap_id"],
-            score_data["beatmap"]["beatmapset_id"],
-        )
-        if not background_image:
-            return "Couldn't find background of this map!"
-
-        postprocessed_img = postprocessing.apply_effects_normal_template(
-            background_image,
-        )
-        postprocessed_img.save(
-            os.path.join(
-                settings.DATA_DIR,
-                "finals",
-                "backgrounds",
-                f"{score_data['beatmap']['beatmap_id']}_normal.png",
-            ),
-        )
+    beatmap_background_image_data = (
+        await osu_beatmaps.get_beatmap_background_image_data(beatmapset_id)
+    )
+    if not beatmap_background_image_data:
+        return "Couldn't find this beatmap!"
 
     if not detail_text and not detail_colour:
         detail_text, detail_colour = calculate_detail_text_and_colour(score_data)
@@ -232,53 +210,28 @@ async def generate_normal_metadata(
     template = template.replace(r"<% acc %>", f"{score_data['accuracy']:.2f}")
     template = template.replace(r"<% misc-text %>", detail_text)  # type: ignore
 
-    with open(
-        os.path.join(
-            settings.DATA_DIR,
-            "finals",
-            "html",
-            f"{score_data['beatmap']['beatmap_id']}_{score_data['user']['id']}_score.html",
-        ),
-        "w",
-    ) as f:
-        f.write(template)
+    from app import html_to_image
 
-    url = os.path.join(
-        "/bot-data",  # mounted in docker; DON'T TOUCH
-        "finals",
-        "html",
-        f"{score_data['beatmap']['beatmap_id']}_{score_data['user']['id']}_score.html",
+    image = html_to_image.render_html_as_image(
+        template,
+        output_image_size=(1920, 1080),
     )
+    image = image.convert("RGB")
 
-    state.webdriver.capture_web_canvas(
-        "file://" + url,
-        os.path.join(
-            settings.DATA_DIR,
-            "finals",
-            "thumbnails",
-            f"{score_data['beatmap']['beatmap_id']}_{score_data['user']['id']}_score.png",
-        ),
-    )
+    with io.BytesIO() as image_buffer:
+        image.save(
+            image_buffer,
+            format="JPEG",
+            subsampling=0,
+            quality=100,
+        )
 
-    # convert to jpg because of youtube limit.
-    img = postprocessing.convert_to_jpg(
-        os.path.join(
-            settings.DATA_DIR,
-            "finals",
-            "thumbnails",
-            f"{score_data['beatmap']['beatmap_id']}_{score_data['user']['id']}_score.png",
-        ),
-    )
-    img.save(
-        os.path.join(
-            settings.DATA_DIR,
-            "finals",
-            "thumbnails",
-            f"{score_data['beatmap']['beatmap_id']}_{score_data['user']['id']}_score.jpg",
-        ),
-        format="JPEG",
-        subsampling=0,
-        quality=100,
+        image_buffer.seek(0)
+        image_data = image_buffer.read()
+
+    await aws_s3.save_object_data(
+        f"/scorewatch/thumbnails/{beatmap_id}_{user_id}_score.jpg",
+        image_data,
     )
 
     performance_data = await performance.fetch_one(
@@ -318,10 +271,5 @@ async def generate_normal_metadata(
     return {
         "title": title,
         "description": description,
-        "file": os.path.join(
-            settings.DATA_DIR,
-            "finals",
-            "thumbnails",
-            f"{score_data['beatmap']['beatmap_id']}_{score_data['user']['id']}_score.jpg",
-        ),
+        "image_data": image_data,
     }

@@ -27,7 +27,6 @@ services:
     environment:
       - APP_ENV=${APP_ENV}
       - APP_COMPONENT=${APP_COMPONENT}
-      - DATA_DIR=${DATA_DIR}
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - SELENIUM_DRIVER_URL=${SELENIUM_DRIVER_URL}
       - READ_DB_SCHEME=${READ_DB_SCHEME}

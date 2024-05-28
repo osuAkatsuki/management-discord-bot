@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 import base64
+import io
 import os
 import ssl
 import sys
 import textwrap
+from app.adapters import aws_s3
 from typing import Literal
 from urllib import parse
+import aiobotocore.session
+from app.adapters import osu_replays
 
-import aiosu
 import discord
+import httpx
 from aiosu.models.mods import Mod
 from discord import app_commands
 from discord.ext import commands
@@ -22,22 +26,11 @@ from app.common import views
 from app.usecases import scorewatch
 from app.common import settings
 from app.adapters import database
-from app.adapters import http
 from app.adapters import webdriver
 from app import state
 from app.constants import Status
 from app.repositories import scores, sw_requests
 
-
-dirs = (
-    settings.DATA_DIR,
-    os.path.join(settings.DATA_DIR, "beatmap"),
-    os.path.join(settings.DATA_DIR, "replay"),
-    os.path.join(settings.DATA_DIR, "finals"),
-    os.path.join(settings.DATA_DIR, "finals", "backgrounds"),
-    os.path.join(settings.DATA_DIR, "finals", "html"),
-    os.path.join(settings.DATA_DIR, "finals", "thumbnails"),
-)
 
 SW_WHITELIST = [
     291927822635761665,  # lenforiee
@@ -45,10 +38,6 @@ SW_WHITELIST = [
     153954447247147018,  # rapha
 ]
 
-
-def check_folder(path: str) -> None:
-    if not os.path.exists(path):
-        os.mkdir(path)
 
 class Bot(commands.Bot):
     def __init__(self, *args, **kwargs):
@@ -114,11 +103,18 @@ async def on_ready() -> None:
     )
     await state.write_database.connect()
 
-    state.http_client = http.HTTPClient()
+    state.http_client = httpx.AsyncClient()
     state.webdriver = webdriver.WebDriver()
 
-    for dir in dirs:
-        check_folder(dir)
+    aws_session = aiobotocore.session.get_session()
+    state.s3_client = aws_session.create_client(
+        service_name="s3",
+        region_name=settings.AWS_S3_REGION_NAME,
+        endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+        aws_access_key_id=settings.AWS_S3_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_S3_SECRET_ACCESS_KEY,
+    )
+    await state.s3_client.__aenter__()
 
     # Load views so the existing one will still work.
     bot.add_view(views.ReportView(bot))
@@ -237,13 +233,18 @@ async def request(
         )
         return
 
-    replay_path = os.path.join(settings.DATA_DIR, "replay", f"{score_id}.osr")
-    if not os.path.exists(replay_path):
-        await state.http_client.download_file(replay_url, replay_path, is_replay=True)
-
-    if not os.path.exists(replay_path):
+    osu_replay_data = await aws_s3.get_object_data(f"/replays/{score_id}.osr")
+    if not osu_replay_data:
         await interaction.followup.send(
             "This replay does not exist!",
+            ephemeral=True,
+        )
+        return
+
+    osu_replay = osu_replays.read_osu_replay_file_data(osu_replay_data)
+    if not osu_replay:
+        await interaction.followup.send(
+            "Failed to parse the replay file!",
             ephemeral=True,
         )
         return
@@ -257,14 +258,12 @@ async def request(
         )
         return
 
-    replay_file = aiosu.utils.replay.parse_path(replay_path)
-
     relax = 0
     relax_text = "VN"
-    if replay_file.mods & Mod.Relax:
+    if osu_replay.mods & Mod.Relax:
         relax = 1
         relax_text = "RX"
-    elif replay_file.mods & Mod.Autopilot:
+    elif osu_replay.mods & Mod.Autopilot:
         relax = 2
         relax_text = "AP"
 
@@ -332,7 +331,7 @@ async def request(
                 {', '.join(users_mentions)}
             """,
         ),
-        file=discord.File(replay_path),
+        file=discord.File(io.BytesIO(osu_replay_data)),
         view=views.ScorewatchButtonView(int(score_id), bot),
     )
 
@@ -397,15 +396,6 @@ async def generate(
         )
         return
 
-    # TODO: is this even needed now?
-    replay_path = os.path.join(settings.DATA_DIR, "replay", f"{score_id}.osr")
-    if not os.path.exists(replay_path):
-        await state.http_client.download_file(
-            f"https://akatsuki.gg/web/replays/{score_id}",
-            replay_path,
-            is_replay=True,
-        )
-
     relax = scorewatch.get_relax_from_score_id(int(score_id))
     score_data = await scores.fetch_one(int(score_id), relax)
     if not score_data:
@@ -415,7 +405,7 @@ async def generate(
         )
         return
 
-    metadata = await scorewatch.generate_normal_metadata(
+    upload_data = await scorewatch.generate_score_upload_resources(
         score_data,
         username,
         artist,
@@ -425,25 +415,23 @@ async def generate(
         detail_colour,
     )
 
-    if isinstance(metadata, str):
-        await interaction.followup.send(metadata)
+    if isinstance(upload_data, str):
+        await interaction.followup.send(upload_data)
         return
 
     await interaction.followup.send(
         "\n".join(
             (
                 "**Title:**",
-                f"```{metadata['title']}```",
+                f"```{upload_data['title']}```",
                 "",
                 "**Description:**",
-                f"```{metadata['description']}```",
+                f"```{upload_data['description']}```",
                 "",
                 "**Thumbnail:**",
             ),
         ),
-        file=discord.File(
-            metadata["file"],
-        ),
+        file=discord.File(io.BytesIO(upload_data["image_data"])),
     )
 
 
