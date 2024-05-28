@@ -5,7 +5,7 @@ from app.common import settings
 
 async def get_object_data(key: str) -> bytes | None:
     try:
-        replay_object = await state.s3_client.get_object(
+        s3_object = await state.s3_client.get_object(
             Bucket=settings.AWS_S3_BUCKET_NAME,
             Key=key,
         )
@@ -17,7 +17,7 @@ async def get_object_data(key: str) -> bytes | None:
         )
         return None
 
-    return replay_object["Body"]
+    return s3_object["Body"]
 
 
 async def save_object_data(key: str, data: bytes) -> None:

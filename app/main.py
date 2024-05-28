@@ -5,11 +5,10 @@ import os
 import ssl
 import sys
 import textwrap
-from app.adapters import aws_s3
 from typing import Literal
 from urllib import parse
 import aiobotocore.session
-from app.adapters import osu_replays
+from app import osu_replays
 
 import discord
 import httpx
@@ -223,9 +222,9 @@ async def request(
         )
         return
 
-    score_id = parsed_url.path[13:]
+    score_id_str = parsed_url.path[13:]
 
-    if not score_id.isnumeric():
+    if not score_id_str.isnumeric():
         await interaction.followup.send(
             "This is not a valid Akatsuki replay URL!\n"
             "Valid syntax: `https://akatsuki.gg/web/replays/XXXXXXXX`",
@@ -233,15 +232,9 @@ async def request(
         )
         return
 
-    osu_replay_data = await aws_s3.get_object_data(f"/replays/{score_id}.osr")
-    if not osu_replay_data:
-        await interaction.followup.send(
-            "This replay does not exist!",
-            ephemeral=True,
-        )
-        return
+    score_id = int(score_id_str)
 
-    osu_replay = osu_replays.read_osu_replay_file_data(osu_replay_data)
+    osu_replay = await osu_replays.get_replay(score_id)
     if not osu_replay:
         await interaction.followup.send(
             "Failed to parse the replay file!",
@@ -249,7 +242,7 @@ async def request(
         )
         return
 
-    request_data = await sw_requests.fetch_one(int(score_id))
+    request_data = await sw_requests.fetch_one(score_id)
     if request_data:
         await interaction.followup.send(
             f"This score has been requested on <t:{int(request_data['created_at'].timestamp())}>, "
@@ -267,7 +260,7 @@ async def request(
         relax = 2
         relax_text = "AP"
 
-    score_data = await scores.fetch_one(int(score_id), relax)
+    score_data = await scores.fetch_one(score_id, relax)
     if not score_data:
         await interaction.followup.send(
             "Could not find information about this score!",
@@ -331,13 +324,13 @@ async def request(
                 {', '.join(users_mentions)}
             """,
         ),
-        file=discord.File(io.BytesIO(osu_replay_data)),
-        view=views.ScorewatchButtonView(int(score_id), bot),
+        file=discord.File(io.BytesIO(osu_replay.raw_replay_data)),
+        view=views.ScorewatchButtonView(score_id, bot),
     )
 
     request_data = await sw_requests.create(
         interaction.user.id,
-        int(score_id),
+        score_id,
         relax,
         status.value,
         thread_embed.id,
