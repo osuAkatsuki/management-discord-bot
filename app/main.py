@@ -50,6 +50,7 @@ def check_folder(path: str) -> None:
     if not os.path.exists(path):
         os.mkdir(path)
 
+
 class Bot(commands.Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(

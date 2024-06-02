@@ -26,8 +26,10 @@ def get_title_colour(relax: int) -> str:
         2: "#c5ff96",
     }[relax]
 
+
 RELAX_OFFSET = 500000000
 AP_OFFSET = 6148914691236517204
+
 
 def get_relax_from_score_id(score_id: int) -> int:
     if score_id < RELAX_OFFSET:
@@ -36,6 +38,7 @@ def get_relax_from_score_id(score_id: int) -> int:
         return 2
 
     return 0
+
 
 def calculate_detail_text_and_colour(score_data: Score) -> tuple[str, str]:
     detail_text = "FC"
@@ -113,7 +116,7 @@ async def generate_normal_metadata(
             is_replay=True,
         )
 
-    #if not os.path.exists(replay_path):
+    # if not os.path.exists(replay_path):
     #    return "This replay does not exist!"
 
     relax = get_relax_from_score_id(int(score_data["id"]))

@@ -63,7 +63,7 @@ async def try_download_osz_file(beatmap_id: int, path: str) -> bool:
         if not os.path.exists(path + ".zip"):
             continue
 
-        if os.path.getsize(path + ".zip") < 100: # safe number
+        if os.path.getsize(path + ".zip") < 100:  # safe number
             os.remove(path + ".zip")
             continue
 
