@@ -285,6 +285,7 @@ async def generate_normal_metadata(
     )
 
     performance_data = await performance.fetch_one(
+        score_data["beatmap"]["beatmap_md5"],
         score_data["beatmap"]["beatmap_id"],
         score_data["play_mode"],
         score_data["mods"],
