@@ -10,7 +10,7 @@
 
   <style>
     :root {
-      --map-bg: url(data:image/png;base64,<% beatmap.base64_background %>);
+      --map-bg: url("<% beatmap.background_url %>");
       --user-pfp: url("https://a.akatsuki.gg/<% user.id %>");
       --difficulty-colour: #c148bb;
       --difficulty-text-colour: #303d47;
@@ -353,7 +353,7 @@ is-fc is for when its an fc, shows the "FC" text
 
       <div class="rank-circle">
         <div class="rank-circle-inner">
-          <p><% score.grade %></p>
+          <p><% score.grade_upper %></p>
         </div>
       </div>
     </div>
