@@ -27,14 +27,6 @@ def get_title_colour(relax: int) -> str:
     }[relax]
 
 
-def get_mod_modifier_name(mod: Mod) -> str:
-    return {
-        Mod.Autopilot: "Autoplay",
-        Mod.Relax: "Relax",
-        Mod.TouchDevice: "Touchscreen",
-    }[mod]
-
-
 RELAX_OFFSET = 500000000
 AP_OFFSET = 6148914691236517204
 
@@ -247,7 +239,7 @@ async def generate_normal_metadata(
     )
 
     mods_html = []
-    modifiers = []
+    modifiers = [relax_text]
     for mod in mods:
 
         if Mod.Nightcore in mods and mod is Mod.DoubleTime:
@@ -255,9 +247,8 @@ async def generate_normal_metadata(
         if Mod.Perfect in mods and mod is Mod.SuddenDeath:
             continue
 
-        if mod in (Mod.Autopilot, Mod.Relax, Mod.TouchDevice):
-            mod_name = get_mod_modifier_name(mod)
-            modifiers.append(mod_name)
+        if mod == Mod.TouchDevice:
+            modifiers.append("Touchscreen")
             continue
 
         mods_html.append(f'<div class="mod hard">{mod.short_name}</div>')
