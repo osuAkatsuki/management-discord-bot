@@ -220,22 +220,22 @@ async def generate_normal_metadata(
     )
     template = template.replace(r"<% user.id %>", str(score_data["user"]["id"]))
     template = template.replace(
-        r"<% score.grade %>", score_data["rank"].lower().replace("h", "")
+        r"<% score.grade %>", score_data["rank"].lower().replace("h", ""),
     )
     template = template.replace(
         r"<% score.rank_golden_html %>",
         "rank-golden" if "H" in score_data["rank"] else "",
     )
     template = template.replace(
-        r"<% score.is_fc_html %>", "is-fc" if score_data["full_combo"] else ""
+        r"<% score.is_fc_html %>", "is-fc" if score_data["full_combo"] else "",
     )
     template = template.replace(r"<% user.username %>", username)
     template = template.replace(
-        r"<% user.country_code %>", score_data["user"]["country"].lower()
+        r"<% user.country_code %>", score_data["user"]["country"].lower(),
     )
     template = template.replace(r"<% score.pp %>", str(int(score_data["pp"])))
     template = template.replace(
-        r"<% score.accuracy %>", f"{score_data['accuracy']:.2f}"
+        r"<% score.accuracy %>", f"{score_data['accuracy']:.2f}",
     )
 
     mods_html = []
@@ -257,17 +257,17 @@ async def generate_normal_metadata(
         mods_html.append(f'<div class="mod modifier">{modifier}</div>')
 
     template = template.replace(
-        r"<% score.mods_html %>", "\n          ".join(mods_html)
+        r"<% score.mods_html %>", "\n          ".join(mods_html),
     )
 
     template = template.replace(
-        r"<% score.grade_upper %>", score_data["rank"].replace("H", "")
+        r"<% score.grade_upper %>", score_data["rank"].replace("H", ""),
     )
     template = template.replace(r"<% beatmap.name %>", title)
     template = template.replace(r"<% beatmap.artist %>", artist)
     template = template.replace(r"<% beatmap.version %>", difficulty_name)
     template = template.replace(
-        r"<% beatmap.difficulty %>", f"{performance_data['stars']:.2f}"
+        r"<% beatmap.difficulty %>", f"{performance_data['stars']:.2f}",
     )
 
     template = template.replace(
@@ -275,7 +275,7 @@ async def generate_normal_metadata(
         "has-misses" if score_data["count_miss"] > 0 else "",
     )
     template = template.replace(
-        r"<% score.miss_count %>", str(score_data["count_miss"])
+        r"<% score.miss_count %>", str(score_data["count_miss"]),
     )
 
     with open(
