@@ -37,6 +37,7 @@ class Score(TypedDict):
     play_mode: int
     accuracy: float
     pp: float
+    rank: str
 
 
 async def fetch_one(score_id: int, relax: int) -> Score | None:
@@ -77,6 +78,7 @@ async def fetch_one(score_id: int, relax: int) -> Score | None:
         "play_mode": resp["score"]["play_mode"],
         "accuracy": resp["score"]["accuracy"],
         "pp": resp["score"]["pp"],
+        "rank": resp["score"]["rank"],
     }
 
     return cast(Score, rec)
