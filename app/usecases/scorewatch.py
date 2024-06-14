@@ -270,6 +270,14 @@ async def generate_normal_metadata(
         r"<% beatmap.difficulty %>", f"{performance_data['stars']:.2f}"
     )
 
+    template = template.replace(
+        r"<% score.has_misses_html %>",
+        "has-misses" if score_data["count_miss"] > 0 else "",
+    )
+    template = template.replace(
+        r"<% score.miss_count %>", str(score_data["count_miss"])
+    )
+
     with open(
         os.path.join(
             settings.DATA_DIR,
