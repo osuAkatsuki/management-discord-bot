@@ -247,13 +247,23 @@ async def generate_normal_metadata(
     )
 
     mods_html = []
+    modifiers = []
     for mod in mods:
+
+        if Mod.Nightcore in mods and mod is Mod.DoubleTime:
+            continue
+        if Mod.Perfect in mods and mod is Mod.SuddenDeath:
+            continue
+
         if mod in (Mod.Autopilot, Mod.Relax, Mod.TouchDevice):
             mod_name = get_mod_modifier_name(mod)
-            mods_html.append(f'<div class="mod modifier">{mod_name}</div>')
+            modifiers.append(mod_name)
             continue
 
         mods_html.append(f'<div class="mod hard">{mod.short_name}</div>')
+
+    for modifier in modifiers:
+        mods_html.append(f'<div class="mod modifier">{modifier}</div>')
 
     template = template.replace(
         r"<% score.mods_html %>", "\n          ".join(mods_html)
