@@ -67,7 +67,7 @@ async def format_request_embed(
             Replay: [Click here!](https://akatsuki.gg/web/replays/{score_data['id']})
         """,
         color=status.embed_colour,
-        timestamp=datetime.datetime.utcnow(),
+        timestamp=datetime.datetime.now(datetime.UTC),
     )
     embed.add_field(
         name="Score Information:",
@@ -115,7 +115,7 @@ async def generate_score_upload_resources(
     beatmap_bytes = await osu_beatmaps.get_beatmap(beatmap_id)
 
     if not beatmap_bytes:
-        return "Couldn't find this beatmap!"
+        return "Couldn't find beatmap associated with this score!"
 
     beatmap = osu_beatmaps.parse_beatmap_metadata(beatmap_bytes)
     beatmap_background_image = await osu_beatmaps.get_beatmap_background_image(
@@ -124,7 +124,7 @@ async def generate_score_upload_resources(
     )
 
     if not beatmap_background_image:
-        return "Couldn't find this beatmap!"
+        return "Couldn't find beatmap associated with this score!"
 
     beatmap_background_image = postprocessing.apply_effects_normal_template(
         beatmap_background_image,
@@ -153,7 +153,7 @@ async def generate_score_upload_resources(
     )
 
     if not performance_data:
-        return "Couldn't find performance data for this score!"
+        return "Couldn't generate performance statistics for this score!"
 
     with open(os.path.join("templates", "scorewatch_normal.html")) as f:
         template = f.read()
@@ -260,7 +260,7 @@ async def generate_score_upload_resources(
             "Recorded by <>",
             "Uploaded by <>",
             "------------------",
-            "Akatsuki is an osu! private server, featuring a normal and relax server with many active users! Join our discord here! https://akatsuki.gg/discord",
+            "Akatsuki is an osu! private server featuring normal, relax, and autopilot leaderboards, with many active users! Join our discord here! https://akatsuki.gg/discord",
         ),
     )
 

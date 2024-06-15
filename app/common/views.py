@@ -62,7 +62,7 @@ class ReportForm(discord.ui.Modal):
 
         user_data = await users.fetch_one(url_type, user_id)
 
-        # they should be not banned
+        # they shouldn't be banned, yet.
         if not user_data:
             await interaction.followup.send(
                 "Player could not be found!",
@@ -83,7 +83,7 @@ class ReportForm(discord.ui.Modal):
         embed.set_footer(text=footer_text)
 
         channel = self.bot.get_channel(settings.ADMIN_REPORT_CHANNEL_ID)
-        if not channel:
+        if not channel:  # valid case when channel doesn't exist anymore
             await interaction.followup.send(
                 "There was an error sending your report. Please try again later.",
                 ephemeral=True,
@@ -127,11 +127,12 @@ class ScorewatchVoteButton(discord.ui.Button):
         if not isinstance(interaction.channel, discord.Thread):
             return
 
-        role = interaction.guild.get_role(settings.AKATSUKI_SCOREWATCH_ROLE_ID)  # type: ignore
-        if not role:
-            return  # ???????
+        assert interaction.guild is not None
+        role = interaction.guild.get_role(settings.AKATSUKI_SCOREWATCH_ROLE_ID)
+        assert role is not None
 
-        if not role in interaction.user.roles:  # type: ignore
+        assert isinstance(interaction.user, discord.Member)
+        if role not in interaction.user.roles:
             await interaction.followup.send(
                 "You don't have permission to vote on this request!",
                 ephemeral=True,
@@ -139,9 +140,9 @@ class ScorewatchVoteButton(discord.ui.Button):
             return
 
         request_data = await sw_requests.fetch_one(self.score_id)
-        if not request_data:  # perhaps we can add removing requests?
+        if not request_data:
             await interaction.followup.send(
-                "This request no longer exists!",
+                "This request no longer exist!",
                 ephemeral=True,
             )
             return
@@ -180,9 +181,7 @@ class ScorewatchVoteButton(discord.ui.Button):
         )
         all_votes = {vote["vote_user_id"]: vote for vote in upvotes + downvotes}
 
-        users_mentions = {
-            member.id: member.mention for member in role.members  # type: ignore
-        }
+        users_mentions = {member.id: member.mention for member in role.members}
 
         left_to_vote = set()
         for user_id, user_mention in users_mentions.items():
@@ -215,7 +214,7 @@ class ScorewatchVoteButton(discord.ui.Button):
         )
         await old_thread_msg.edit(content=msg_content)
         await interaction.followup.send(
-            f"Your vote has been recorded!",
+            f"You have successfully voted on this request!",
             ephemeral=True,
         )
 
@@ -233,7 +232,7 @@ class ScorewatchVoteButton(discord.ui.Button):
         await sw_requests.partial_update(
             request_data["score_id"],
             status.value,
-            datetime.datetime.utcnow(),
+            datetime.datetime.now(datetime.UTC),
         )
 
         score_data = await scores.fetch_one(
@@ -243,7 +242,7 @@ class ScorewatchVoteButton(discord.ui.Button):
 
         if not score_data:
             await interaction.channel.send(
-                "Couldn't find this play!",
+                "Could not find this score!",
             )
             return
 
@@ -279,7 +278,7 @@ class ScorewatchVoteButton(discord.ui.Button):
             return
 
         await interaction.channel.send(
-            "Generating scorewatch metadata, it will show up in a moment...",
+            "Generating score upload metadata, it will show up in a moment...",
         )
 
         async with interaction.channel.typing():

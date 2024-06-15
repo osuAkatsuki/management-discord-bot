@@ -134,7 +134,7 @@ async def on_ready() -> None:
 
 @bot.tree.command(
     name="genembed",
-    description="Generate an embed for a channel!",
+    description="Generate an interactive embed for a specific channel!",
 )
 async def genembed(
     interaction: discord.Interaction,
@@ -142,7 +142,9 @@ async def genembed(
     channel_id: str,
 ) -> None:
     # check if the user is an admin.
-    if not interaction.user.guild_permissions.administrator:  # type: ignore
+
+    assert isinstance(interaction.user, discord.Member)
+    if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message(
             "You must be an administrator to use this command!",
             ephemeral=True,
@@ -194,20 +196,20 @@ async def genembed(
 
 @bot.tree.command(
     name="request",
-    description="Request to upload a replay!",
+    description="Requests a score to upload!",
 )
 @app_commands.describe(replay_url="Akatsuki replay URL")
 async def request(
     interaction: discord.Interaction,
     replay_url: str,
 ) -> None:
-    channel = await bot.fetch_channel(settings.ADMIN_SCOREWATCH_CHANNEL_ID)
-    role = interaction.guild.get_role(settings.AKATSUKI_SCOREWATCH_ROLE_ID)  # type: ignore
-
-    if not role:
-        return  # ?????
-
     await interaction.response.defer(ephemeral=True)
+
+    channel = await bot.fetch_channel(settings.ADMIN_SCOREWATCH_CHANNEL_ID)
+
+    assert interaction.guild is not None
+    role = interaction.guild.get_role(settings.AKATSUKI_SCOREWATCH_ROLE_ID)
+    assert role is not None
 
     if interaction.channel_id != settings.SCOREWATCH_CHANNEL_ID:
         await interaction.followup.send(
@@ -266,14 +268,14 @@ async def request(
     score_data = await scores.fetch_one(score_id, relax)
     if not score_data:
         await interaction.followup.send(
-            "Could not find information about this score!",
+            "Could not find this score!",
             ephemeral=True,
         )
         return
 
     thread_starter_message_embed = discord.Embed(
         title="Replay Upload Request",
-        description=f"{interaction.user.mention} requested a replay upload for score ID **[{score_id}](https://akatsuki.gg/web/replays/{score_id})**",
+        description=f"{interaction.user.mention} requested a score upload for score ID **[{score_id}](https://akatsuki.gg/web/replays/{score_id})**",
         color=0x3498DB,
     )
 
@@ -354,7 +356,7 @@ async def request(
 
 @bot.tree.command(
     name="generate",
-    description="Generate a youtube thumbnail, title and description!",
+    description="Generates score upload metadata!",
 )
 @app_commands.describe(
     score_id="Score ID",
@@ -373,11 +375,12 @@ async def generate(
 ) -> None:
     await interaction.response.defer()
 
-    role = interaction.guild.get_role(settings.AKATSUKI_SCOREWATCH_ROLE_ID)  # type: ignore
-    if not role:
-        return  # ???????
+    assert interaction.guild is not None
+    role = interaction.guild.get_role(settings.AKATSUKI_SCOREWATCH_ROLE_ID)
+    assert role is not None
 
-    if not role in interaction.user.roles and not interaction.user.id in SW_WHITELIST:  # type: ignore
+    assert isinstance(interaction.user, discord.Member)
+    if role not in interaction.user.roles and interaction.user.id not in SW_WHITELIST:
         await interaction.followup.send(
             "You don't have permission to run this command!",
             ephemeral=True,
@@ -395,7 +398,7 @@ async def generate(
     score_data = await scores.fetch_one(int(score_id), relax)
     if not score_data:
         await interaction.followup.send(
-            "Couldn't find this score!",
+            "Could not find this score!",
             ephemeral=True,
         )
         return
