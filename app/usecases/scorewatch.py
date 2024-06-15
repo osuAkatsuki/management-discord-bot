@@ -1,8 +1,7 @@
-import base64
 import datetime
 import os
+import tempfile
 import typing
-from io import BytesIO
 
 import aiosu
 import discord
@@ -11,13 +10,13 @@ from discord.ext import commands
 from app import osu
 from app import osu_beatmaps
 from app import state
-from app.adapters import aws_s3
 from app.constants import DetailTextColour
 from app.constants import Status
 from app.repositories import performance
 from app.repositories.scores import Score
 from app.repositories.sw_requests import ScorewatchRequest
 from app.usecases import postprocessing
+from aiosu.models.mods import Mod
 
 
 def get_title_colour(relax: int) -> str:
@@ -125,8 +124,6 @@ async def generate_score_upload_resources(
 
     mods = aiosu.models.mods.Mods(score_data["mods"])
 
-    user_id = score_data["user"]["id"]
-
     beatmap_id = score_data["beatmap"]["beatmap_id"]
     beatmapset_id = score_data["beatmap"]["beatmapset_id"]
 
@@ -137,7 +134,8 @@ async def generate_score_upload_resources(
 
     beatmap = osu_beatmaps.parse_beatmap_metadata(beatmap_bytes)
     beatmap_background_image = await osu_beatmaps.get_beatmap_background_image(
-        beatmap_id, beatmapset_id,
+        beatmap_id,
+        beatmapset_id,
     )
 
     if not beatmap_background_image:
@@ -178,82 +176,82 @@ async def generate_score_upload_resources(
     with open(os.path.join("templates", "scorewatch_normal.html")) as f:
         template = f.read()
 
-    with BytesIO() as background_buffer:
-        beatmap_background_image.save(background_buffer, format="PNG")
+    with tempfile.NamedTemporaryFile(suffix=".png") as background_file:
+        beatmap_background_image.save(background_file.name, format="PNG")
         template = template.replace(
             r"<% beatmap.background_url %>",
-            base64.b64encode(background_buffer.getvalue()).decode("utf-8"),
+            background_file.name,
         )
 
-    template = template.replace(r"<% user.id %>", str(score_data["user"]["id"]))
-    template = template.replace(
-        r"<% score.grade %>",
-        score_data["rank"].lower().replace("h", ""),
-    )
-    template = template.replace(
-        r"<% score.rank_golden_html %>",
-        "rank-golden" if "H" in score_data["rank"] else "",
-    )
-    template = template.replace(
-        r"<% score.is_fc_html %>",
-        "is-fc" if score_data["full_combo"] else "",
-    )
-    template = template.replace(r"<% user.username %>", username)
-    template = template.replace(
-        r"<% user.country_code %>",
-        score_data["user"]["country"].lower(),
-    )
-    template = template.replace(r"<% score.pp %>", str(int(score_data["pp"])))
-    template = template.replace(
-        r"<% score.accuracy %>",
-        f"{score_data['accuracy']:.2f}",
-    )
+        template = template.replace(r"<% user.id %>", str(score_data["user"]["id"]))
+        template = template.replace(
+            r"<% score.grade %>",
+            score_data["rank"].lower().replace("h", ""),
+        )
+        template = template.replace(
+            r"<% score.rank_golden_html %>",
+            "rank-golden" if "H" in score_data["rank"] else "",
+        )
+        template = template.replace(
+            r"<% score.is_fc_html %>",
+            "is-fc" if score_data["full_combo"] else "",
+        )
+        template = template.replace(r"<% user.username %>", username)
+        template = template.replace(
+            r"<% user.country_code %>",
+            score_data["user"]["country"].lower(),
+        )
+        template = template.replace(r"<% score.pp %>", str(int(score_data["pp"])))
+        template = template.replace(
+            r"<% score.accuracy %>",
+            f"{score_data['accuracy']:.2f}",
+        )
 
-    mods_html = []
-    modifiers = [relax_text]
-    for mod in mods:
+        mods_html = []
+        modifiers = [relax_text]
+        for mod in mods:
 
-        if Mod.Nightcore in mods and mod is Mod.DoubleTime:
-            continue
-        if Mod.Perfect in mods and mod is Mod.SuddenDeath:
-            continue
+            if Mod.Nightcore in mods and mod is Mod.DoubleTime:
+                continue
+            if Mod.Perfect in mods and mod is Mod.SuddenDeath:
+                continue
 
-        if mod == Mod.TouchDevice:
-            modifiers.append("Touchscreen")
-            continue
+            if mod == Mod.TouchDevice:
+                modifiers.append("Touchscreen")
+                continue
 
-        mods_html.append(f'<div class="mod hard">{mod.short_name}</div>')
+            mods_html.append(f'<div class="mod hard">{mod.short_name}</div>')
 
-    for modifier in modifiers:
-        mods_html.append(f'<div class="mod modifier">{modifier}</div>')
+        for modifier in modifiers:
+            mods_html.append(f'<div class="mod modifier">{modifier}</div>')
 
-    template = template.replace(
-        r"<% score.mods_html %>",
-        "\n          ".join(mods_html),
-    )
+        template = template.replace(
+            r"<% score.mods_html %>",
+            "\n          ".join(mods_html),
+        )
 
-    template = template.replace(
-        r"<% score.grade_upper %>",
-        score_data["rank"].replace("H", ""),
-    )
-    template = template.replace(r"<% beatmap.name %>", title)
-    template = template.replace(r"<% beatmap.artist %>", artist)
-    template = template.replace(r"<% beatmap.version %>", difficulty_name)
-    template = template.replace(
-        r"<% beatmap.difficulty %>",
-        f"{performance_data['stars']:.2f}",
-    )
+        template = template.replace(
+            r"<% score.grade_upper %>",
+            score_data["rank"].replace("H", ""),
+        )
+        template = template.replace(r"<% beatmap.name %>", title)
+        template = template.replace(r"<% beatmap.artist %>", artist)
+        template = template.replace(r"<% beatmap.version %>", difficulty_name)
+        template = template.replace(
+            r"<% beatmap.difficulty %>",
+            f"{performance_data['stars']:.2f}",
+        )
 
-    template = template.replace(
-        r"<% score.has_misses_html %>",
-        "has-misses" if score_data["count_miss"] > 0 else "",
-    )
-    template = template.replace(
-        r"<% score.miss_count %>",
-        str(score_data["count_miss"]),
-    )
+        template = template.replace(
+            r"<% score.has_misses_html %>",
+            "has-misses" if score_data["count_miss"] > 0 else "",
+        )
+        template = template.replace(
+            r"<% score.miss_count %>",
+            str(score_data["count_miss"]),
+        )
 
-    thumbnail_image_data = state.webdriver.capture_html_as_jpeg_image(template)
+        thumbnail_image_data = state.webdriver.capture_html_as_jpeg_image(template)
 
     # await aws_s3.save_object_data(
     #     f"/scorewatch/thumbnails/{beatmap_id}_{user_id}_score.jpg",
