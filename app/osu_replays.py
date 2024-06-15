@@ -4,6 +4,7 @@ import logging
 import aiosu
 from aiosu.models.files import ReplayFile
 
+from app.common import settings
 from app import state
 
 
@@ -13,7 +14,7 @@ class Replay(ReplayFile):
 
 async def get_replay(score_id: int) -> Replay | None:
     response = await state.http_client.get(
-        f"https://akatsuki.gg/web/replays/{score_id}",
+        f"{settings.APP_SCORE_SERVICE_URL}/replays/{score_id}",
         headers={"User-Agent": "akatsuki/management-bot"},
     )
     response.raise_for_status()

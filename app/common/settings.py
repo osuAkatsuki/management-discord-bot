@@ -13,6 +13,10 @@ load_dotenv()
 APP_ENV = os.environ["APP_ENV"]
 APP_COMPONENT = os.environ["APP_COMPONENT"]
 
+APP_PERFORMANCE_URL = os.environ["APP_PERFORMANCE_URL"]
+APP_API_URL = os.environ["APP_API_URL"]
+APP_SCORE_SERVICE_URL = os.environ["APP_SCORE_SERVICE_URL"]
+
 DISCORD_TOKEN = os.environ["DISCORD_TOKEN"]
 
 READ_DB_SCHEME = os.environ["READ_DB_SCHEME"]
