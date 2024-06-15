@@ -11,6 +11,7 @@ class User(TypedDict):
 
 
 class Beatmap(TypedDict):
+    beatmap_md5: str
     beatmap_id: int
     beatmapset_id: int
     song_name: str
@@ -54,6 +55,7 @@ async def fetch_one(score_id: int, relax: int) -> Score | None:
             "country": resp["score"]["user"]["country"],
         },
         "beatmap": {
+            "beatmap_md5": resp["beatmap"]["beatmap_md5"],
             "beatmap_id": resp["beatmap"]["beatmap_id"],
             "beatmapset_id": resp["beatmap"]["beatmapset_id"],
             "song_name": resp["beatmap"]["song_name"],

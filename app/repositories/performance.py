@@ -10,6 +10,7 @@ class Performance(TypedDict):
 
 
 async def fetch_one(
+    beatmap_md5: str,
     beatmap_id: int,
     mode: int,
     mods: int,
@@ -21,6 +22,7 @@ async def fetch_one(
         "https://performance.akatsuki.gg/api/v1/calculate",
         json=[
             {
+                "beatmap_md5": beatmap_md5,
                 "beatmap_id": beatmap_id,
                 "mode": mode,
                 "mods": mods,
