@@ -3,6 +3,7 @@ import logging
 from typing import TypedDict
 import typing
 import zipfile
+from app import state
 from app.adapters import aws_s3
 from app.adapters import osu_api_v1
 from PIL import Image
@@ -61,8 +62,28 @@ async def get_beatmap_background_image(
 
 
 async def _get_beatmap_background_image_online(
-    beatmap_id: int, beatmapset_id: int
-) -> Image.Image | None: ...
+    beatmap_id: int, _: int
+) -> Image.Image | None:
+    osu_background_url = f"https://api.osu.direct/media/background/{beatmap_id}"
+    response = await state.http_client.get(
+        osu_background_url,
+        headers={"User-Agent": "akatsuki/management-bot"},
+    )
+    response.raise_for_status()
+
+    background_data = response.read()
+    if b"beatmap not found!" in background_data:
+        logging.warning(
+            "Failed to find beatmap background image on osu.direct",
+            extra={"beatmap_id": beatmap_id},
+        )
+        return None
+
+    with io.BytesIO(background_data) as image_file:
+        image = Image.open(image_file)
+        image.load()
+
+    return image
 
 
 async def _get_beatmap_background_image_io(

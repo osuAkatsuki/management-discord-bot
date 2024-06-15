@@ -19,10 +19,7 @@ async def get_replay(score_id: int) -> Replay | None:
     osu_replay_data = response.read()
 
     if not osu_replay_data or osu_replay_data == b"Score not found!":
-        logging.warning(
-            "Failed to find osu! replay file data on S3",
-            exc_info=True,
-        )
+        logging.warning("Failed to find osu! replay file data")
         return
 
     try:
