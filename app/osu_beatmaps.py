@@ -20,7 +20,6 @@ class Beatmap(TypedDict):
     title: str
     creator: str
     version: str
-    max_combo: int
 
 
 BEATMAP_MIRRORS: list[BeatmapMirror] = [
@@ -141,7 +140,6 @@ def parse_beatmap_metadata(osu_file_bytes: bytes) -> Beatmap:
         elif line.startswith("Version:"):
             beatmap["version"] = line.split(":")[1].strip()
 
-    beatmap["max_combo"] = 0
     return typing.cast(Beatmap, beatmap)
 
 
