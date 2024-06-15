@@ -85,8 +85,6 @@ async def _get_beatmap_background_image_io(
         with io.BytesIO(data) as zip_file:
             with zipfile.ZipFile(zip_file) as zip_ref:
                 for file_name in zip_ref.namelist():
-                    print(file_name)
-                    print(background_filename)
                     if file_name == background_filename:
                         break
                 else:  # try next mirror
