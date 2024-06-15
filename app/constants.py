@@ -6,12 +6,6 @@ class VoteType(Enum):
     DOWNVOTE = "downvote"
 
 
-class DetailTextColour(Enum):
-    FC = "#f0cb58"
-    SB = "#63943b"
-    MISS = "#e95e69"
-
-
 class Status(Enum):
     UNKNOWN = "unknown"
     PENDING = "pending"

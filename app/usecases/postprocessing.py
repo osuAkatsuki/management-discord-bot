@@ -118,14 +118,7 @@ def convert_to_jpg(image: str | Image.Image) -> Image.Image:
 def apply_effects_normal_template(input_image: Image.Image) -> Image.Image:
     """Apply effects for normal score template."""
 
-    im = resize_image(input_image, (1920, 1080))
-    # im1 = apply_new_brightness(im, (0, 0, 1920, 244), 0.63)
-    # im2 = apply_gaussian_blur(im1, (0, 0, 1920, 244), 3)
-    # im3 = apply_shading(im2, (0, 0, 0), 0.39)
-    # im4 = apply_saturation(im3, (13, 13, 97), 0.20)
-    # im5 = apply_new_brightness(im4, (0, 0, 1920, 0), 1.1)
-
-    return im
+    return resize_image(input_image, (1920, 1080))
 
 
 def apply_effects_knockout_template(input_image: Image.Image) -> Image.Image:

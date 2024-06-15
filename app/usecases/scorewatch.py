@@ -11,21 +11,11 @@ from discord.ext import commands
 from app import osu
 from app import osu_beatmaps
 from app import state
-from app.constants import DetailTextColour
 from app.constants import Status
 from app.repositories import performance
 from app.repositories.scores import Score
 from app.repositories.sw_requests import ScorewatchRequest
 from app.usecases import postprocessing
-
-
-def get_title_colour(relax: int) -> str:
-    return {  # from old psd template.
-        0: "#cde7ff",
-        1: "#fcff96",
-        2: "#c5ff96",
-    }[relax]
-
 
 RELAX_OFFSET = 500000000
 AP_OFFSET = 6148914691236517204
@@ -40,20 +30,17 @@ def get_relax_from_score_id(score_id: int) -> int:
     return 0
 
 
-def calculate_detail_text_and_colour(score_data: Score) -> tuple[str, str]:
+def calculate_detail_text(score_data: Score) -> str:
     detail_text = "FC"
-    detail_colour = DetailTextColour.FC
     if (
         score_data["count_miss"] == 0
         and score_data["max_combo"] <= score_data["beatmap"]["max_combo"] * 0.9
     ):
         detail_text = "SB"
-        detail_colour = DetailTextColour.SB
     elif score_data["count_miss"] != 0:
-        detail_text = f"{score_data['count_miss']}xMiss"
-        detail_colour = DetailTextColour.MISS
+        detail_text = f"{score_data['count_miss']}❌"
 
-    return detail_text, detail_colour.value
+    return detail_text
 
 
 async def format_request_embed(
@@ -62,7 +49,7 @@ async def format_request_embed(
     request_data: ScorewatchRequest,
     status: Status | None = None,
 ) -> discord.Embed:
-    detail_text, _ = calculate_detail_text_and_colour(score_data)
+    detail_text = calculate_detail_text(score_data)
 
     mods = aiosu.models.mods.Mods(score_data["mods"])
     mode_name = osu.int_to_osu_name(score_data["play_mode"])
@@ -111,8 +98,6 @@ async def generate_score_upload_resources(
     artist: str | None = None,
     title: str | None = None,
     difficulty_name: str | None = None,
-    detail_text: str | None = None,
-    detail_colour: str | None = None,
 ) -> ScoreUploadResources | str:
 
     relax = get_relax_from_score_id(int(score_data["id"]))
@@ -144,9 +129,6 @@ async def generate_score_upload_resources(
     beatmap_background_image = postprocessing.apply_effects_normal_template(
         beatmap_background_image,
     )
-
-    if not detail_text and not detail_colour:
-        detail_text, detail_colour = calculate_detail_text_and_colour(score_data)
 
     if not artist:
         artist = beatmap["artist"]
@@ -220,6 +202,9 @@ async def generate_score_upload_resources(
                 modifiers.append("Touchscreen")
                 continue
 
+            if mod in (Mod.Relax, Mod.Autopilot):
+                continue
+
             mods_html.append(f'<div class="mod hard">{mod.short_name}</div>')
 
         for modifier in modifiers:
@@ -259,11 +244,11 @@ async def generate_score_upload_resources(
     # )
 
     song_name = f"{artist} - {title} [{difficulty_name}]"
-    title_detail_text = detail_text.replace("xMiss", "❌")  # type: ignore
+    detail_text = calculate_detail_text(score_data)
 
     title = (
         f"[{performance_data['stars']:.2f} ⭐] {relax_text} | {username} | "
-        f"{song_name} +{mods} {score_data['accuracy']:.2f}% {int(performance_data['pp'])}pp {title_detail_text}"
+        f"{song_name} +{mods} {score_data['accuracy']:.2f}% {int(performance_data['pp'])}pp {detail_text}"
     )
 
     description = "\n".join(
@@ -273,7 +258,6 @@ async def generate_score_upload_resources(
             f"Map: https://akatsuki.gg/b/{score_data['beatmap']['beatmap_id']}",
             "",
             "Recorded by <>",
-            # "Thumbnail by <>",
             "Uploaded by <>",
             "------------------",
             "Akatsuki is an osu! private server, featuring a normal and relax server with many active users! Join our discord here! https://akatsuki.gg/discord",

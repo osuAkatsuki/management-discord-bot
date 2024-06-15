@@ -358,12 +358,10 @@ async def request(
 )
 @app_commands.describe(
     score_id="Score ID",
-    username="(Optional) Username of the player",
-    artist="(Optional) Artist of the map",
-    title="(Optional) Title of the map",
-    difficulty_name="(Optional) Difficulty name of the map",
-    detail_text="(Optional) Detail text in bottom right corner (Thumbnail)",
-    detail_colour="(Optional) Detail colour (hex) for misc text (Thumbnail)",
+    username="(Optional) Player username",
+    artist="(Optional) Map artist",
+    title="(Optional) Map title",
+    difficulty_name="(Optional) Map difficulty name",
 )
 async def generate(
     interaction: discord.Interaction,
@@ -372,8 +370,6 @@ async def generate(
     artist: str = "",
     title: str = "",
     difficulty_name: str = "",
-    detail_text: str = "",
-    detail_colour: str = "",
 ) -> None:
     await interaction.response.defer()
 
@@ -410,8 +406,6 @@ async def generate(
         artist,
         title,
         difficulty_name,
-        detail_text,
-        detail_colour,
     )
 
     if isinstance(upload_data, str):
