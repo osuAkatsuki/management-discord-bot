@@ -7,6 +7,7 @@ import sys
 import textwrap
 from typing import Literal
 from urllib import parse
+import aiobotocore.session
 import discord
 import httpx
 from aiosu.models.mods import Mod
@@ -102,6 +103,16 @@ async def on_ready() -> None:
 
     state.http_client = httpx.AsyncClient()
     state.webdriver = webdriver.WebDriver()
+
+    aws_session = aiobotocore.session.get_session()
+    s3_client = aws_session.create_client(
+        service_name="s3",
+        region_name=settings.AWS_S3_REGION_NAME,
+        endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+        aws_access_key_id=settings.AWS_S3_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_S3_SECRET_ACCESS_KEY,
+    )
+    state.s3_client = await s3_client.__aenter__()
 
     # Load views so the existing one will still work.
     bot.add_view(views.ReportView(bot))

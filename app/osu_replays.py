@@ -11,13 +11,12 @@ class Replay(ReplayFile):
 
 
 async def get_replay(score_id: int) -> Replay | None:
-    resp = await state.http_client.get(
+    response = await state.http_client.get(
         f"https://akatsuki.gg/web/replays/{score_id}",
-        timeout=10,
         headers={"User-Agent": "akatsuki/management-bot"},
     )
-    resp.raise_for_status()
-    osu_replay_data = resp.read()
+    response.raise_for_status()
+    osu_replay_data = response.read()
 
     if not osu_replay_data or osu_replay_data == b"Score not found!":
         logging.warning(

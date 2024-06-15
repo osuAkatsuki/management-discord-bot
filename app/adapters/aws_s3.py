@@ -17,7 +17,7 @@ async def get_object_data(key: str) -> bytes | None:
         )
         return None
 
-    return s3_object["Body"]
+    return await s3_object["Body"].read()
 
 
 async def save_object_data(key: str, data: bytes) -> None:
