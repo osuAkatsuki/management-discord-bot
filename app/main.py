@@ -101,7 +101,10 @@ async def on_ready() -> None:
     )
     await state.write_database.connect()
 
-    state.http_client = httpx.AsyncClient()
+    state.http_client = httpx.AsyncClient(
+        follow_redirects=True,
+        timeout=60,
+    )
     state.webdriver = webdriver.WebDriver()
 
     aws_session = aiobotocore.session.get_session()
