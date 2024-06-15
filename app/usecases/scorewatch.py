@@ -1,5 +1,4 @@
 import datetime
-import io
 import os
 import typing
 
@@ -130,29 +129,16 @@ async def generate_score_upload_resources(
     beatmap_id = score_data["beatmap"]["beatmap_id"]
     beatmapset_id = score_data["beatmap"]["beatmapset_id"]
 
-    beatmap = await osu_beatmaps.get_beatmap(beatmap_id)
-    if beatmap:
-        beatmap_artist = beatmap.artist
-        beatmap_title = beatmap.title
-        beatmap_difficulty_name = beatmap.version
-        map_full_combo = typing.cast(int, beatmap.max_combo)
-    else:
-        # NOTE: aiosu has some issues with parsing mania maps.
-        # We're using this as a temporary workaround until the
-        # issues have been fixed in the source.
-        beatmap_data = await aws_s3.get_object_data(f"/beatmaps/{beatmap_id}.osu")
-        if not beatmap_data:
-            return "Couldn't find this beatmap!"
+    beatmap_bytes = await osu_beatmaps.get_beatmap(beatmap_id)
 
-        beatmap_metadata = osu.parse_beatmap_metadata_from_file_data(beatmap_data)
-        beatmap_artist = beatmap_metadata["artist"]
-        beatmap_title = beatmap_metadata["title"]
-        beatmap_difficulty_name = beatmap_metadata["version"]
-        map_full_combo = 0
+    if not beatmap_bytes:
+        return "Couldn't find this beatmap!"
 
+    beatmap = osu_beatmaps.parse_beatmap_metadata(beatmap_bytes)
     beatmap_background_image = await osu_beatmaps.get_beatmap_background_image(
-        beatmapset_id
+        beatmap_id, beatmapset_id
     )
+
     if not beatmap_background_image:
         return "Couldn't find this beatmap!"
 
@@ -164,13 +150,13 @@ async def generate_score_upload_resources(
         detail_text, detail_colour = calculate_detail_text_and_colour(score_data)
 
     if not artist:
-        artist = beatmap_artist
+        artist = beatmap["artist"]
 
     if not title:
-        title = beatmap_title
+        title = beatmap["title"]
 
     if not difficulty_name:
-        difficulty_name = beatmap_difficulty_name
+        difficulty_name = beatmap["version"]
 
     if not username:
         username = score_data["user"]["username"]
@@ -201,10 +187,10 @@ async def generate_score_upload_resources(
     template = template.replace(r"<% map-diff %>", difficulty_name)  # type: ignore
     template = template.replace(r"<% mods %>", f"+{mods}")
 
-    if map_full_combo > 0:
+    if beatmap["max_combo"] > 0:
         template = template.replace(
             r"<% combo %>",
-            f"{score_data['max_combo']}x/{map_full_combo}x",
+            f"{score_data['max_combo']}x/{beatmap['max_combo']}x",
         )
     else:
         template = template.replace(
