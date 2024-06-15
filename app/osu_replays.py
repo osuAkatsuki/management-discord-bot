@@ -1,16 +1,25 @@
 import io
 import logging
-from app.adapters import aws_s3
 import aiosu
 
+from app import state
+from aiosu.models.files import ReplayFile
 
-class Replay(aiosu.models.replay.ReplayFile):
+
+class Replay(ReplayFile):
     raw_replay_data: bytes
 
 
 async def get_replay(score_id: int) -> Replay | None:
-    osu_replay_data = await aws_s3.get_object_data(f"/replays/{score_id}.osr")
-    if not osu_replay_data:
+    resp = await state.http_client.get(
+        f"https://akatsuki.gg/web/replays/{score_id}",
+        timeout=10,
+        headers={"User-Agent": "akatsuki/management-bot"},
+    )
+    resp.raise_for_status()
+    osu_replay_data = resp.read()
+
+    if not osu_replay_data or osu_replay_data == b"Score not found!":
         logging.warning(
             "Failed to find osu! replay file data on S3",
             exc_info=True,
