@@ -301,7 +301,10 @@ class ScorewatchVoteButton(discord.ui.Button):
                         "**Thumbnail:**",
                     ),
                 ),
-                file=discord.File(io.BytesIO(upload_data["image_data"])),
+                file=discord.File(
+                    io.BytesIO(upload_data["image_data"]),
+                    filename="thumbnail.jpg",
+                ),
             )
 
 
