@@ -70,10 +70,7 @@ class ReportForm(discord.ui.Modal):
             )
             return
 
-        footer_text = (
-            f"Reported by {interaction.user.name}#"
-            f"{interaction.user.discriminator} ({interaction.user.id})"
-        )
+        footer_text = f"Reported by {interaction.user.name} ({interaction.user.id})"
         embed = discord.Embed(
             title=f"Reported user: {user_data['username']}",
             url=f"https://akatsuki.gg/u/{user_data['id']}",
