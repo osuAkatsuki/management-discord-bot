@@ -1,0 +1,38 @@
+name: production-deploy
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract branch name
+        shell: bash
+        run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+        id: extract_branch
+      - name: Run deploy on production
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script_stop: true
+          script: |
+            cd /home/programming/management-discord-bot
+            git fetch origin
+            git checkout origin/${{ steps.extract_branch.outputs.branch }}
+            git pull origin ${{ steps.extract_branch.outputs.branch }}
+            docker build -t management-discord-bot:latest .
+            docker-compose stop \
+              management-discord-bot \
+              selenium \
+              postgres
+            docker-compose up -d \
+              postgres \
+              selenium \
+              management-discord-bot
