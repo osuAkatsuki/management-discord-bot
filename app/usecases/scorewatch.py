@@ -5,7 +5,7 @@ import typing
 
 import aiosu
 import discord
-from app import state, webdriver
+from app import state
 from discord.ext import commands
 
 from app import osu
@@ -150,8 +150,8 @@ async def generate_score_upload_resources(
         beatmap_difficulty_name = beatmap_metadata["version"]
         map_full_combo = 0
 
-    beatmap_background_image = (
-        await osu_beatmaps.get_beatmap_background_image(beatmapset_id)
+    beatmap_background_image = await osu_beatmaps.get_beatmap_background_image(
+        beatmapset_id
     )
     if not beatmap_background_image:
         return "Couldn't find this beatmap!"

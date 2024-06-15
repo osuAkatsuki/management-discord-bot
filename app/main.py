@@ -7,9 +7,6 @@ import sys
 import textwrap
 from typing import Literal
 from urllib import parse
-import aiobotocore.session
-from app import osu_replays
-
 import discord
 import httpx
 from aiosu.models.mods import Mod
@@ -21,6 +18,7 @@ srv_root = os.path.join(os.path.dirname(__file__), "..")
 
 sys.path.append(srv_root)
 
+from app import osu_replays
 from app.common import views
 from app.usecases import scorewatch
 from app.common import settings
@@ -104,16 +102,6 @@ async def on_ready() -> None:
 
     state.http_client = httpx.AsyncClient()
     state.webdriver = webdriver.WebDriver()
-
-    aws_session = aiobotocore.session.get_session()
-    state.s3_client = aws_session.create_client(
-        service_name="s3",
-        region_name=settings.AWS_S3_REGION_NAME,
-        endpoint_url=settings.AWS_S3_ENDPOINT_URL,
-        aws_access_key_id=settings.AWS_S3_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.AWS_S3_SECRET_ACCESS_KEY,
-    )
-    await state.s3_client.__aenter__()
 
     # Load views so the existing one will still work.
     bot.add_view(views.ReportView(bot))
@@ -324,7 +312,10 @@ async def request(
                 {', '.join(users_mentions)}
             """,
         ),
-        file=discord.File(io.BytesIO(osu_replay.raw_replay_data)),
+        file=discord.File(
+            io.BytesIO(osu_replay.raw_replay_data),
+            filename=f"{score_id}.osr",
+        ),
         view=views.ScorewatchButtonView(score_id, bot),
     )
 
