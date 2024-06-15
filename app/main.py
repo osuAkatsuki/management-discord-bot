@@ -34,7 +34,7 @@ from app.repositories import scores, sw_requests
 SW_WHITELIST = [
     291927822635761665,  # lenforiee
     285190493703503872,  # cmyui
-    153954447247147018,  # rapha
+    272111921610752003,  # tsunyoku
 ]
 
 
