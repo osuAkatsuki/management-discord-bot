@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import base64
+import io
 import os
 import ssl
 import sys
@@ -7,8 +8,9 @@ import textwrap
 from typing import Literal
 from urllib import parse
 
-import aiosu
+import aiobotocore.session
 import discord
+import httpx
 from aiosu.models.mods import Mod
 from discord import app_commands
 from discord.ext import commands
@@ -18,37 +20,22 @@ srv_root = os.path.join(os.path.dirname(__file__), "..")
 
 sys.path.append(srv_root)
 
+from app import osu_replays
 from app.common import views
 from app.usecases import scorewatch
 from app.common import settings
 from app.adapters import database
-from app.adapters import http
 from app.adapters import webdriver
 from app import state
 from app.constants import Status
 from app.repositories import scores, sw_requests
 
 
-dirs = (
-    settings.DATA_DIR,
-    os.path.join(settings.DATA_DIR, "beatmap"),
-    os.path.join(settings.DATA_DIR, "replay"),
-    os.path.join(settings.DATA_DIR, "finals"),
-    os.path.join(settings.DATA_DIR, "finals", "backgrounds"),
-    os.path.join(settings.DATA_DIR, "finals", "html"),
-    os.path.join(settings.DATA_DIR, "finals", "thumbnails"),
-)
-
 SW_WHITELIST = [
     291927822635761665,  # lenforiee
     285190493703503872,  # cmyui
-    153954447247147018,  # rapha
+    272111921610752003,  # tsunyoku
 ]
-
-
-def check_folder(path: str) -> None:
-    if not os.path.exists(path):
-        os.mkdir(path)
 
 
 class Bot(commands.Bot):
@@ -115,11 +102,22 @@ async def on_ready() -> None:
     )
     await state.write_database.connect()
 
-    state.http_client = http.HTTPClient()
+    state.http_client = httpx.AsyncClient(
+        follow_redirects=True,
+        timeout=30,
+        headers={"User-Agent": "akatsuki/management-bot"},
+    )
     state.webdriver = webdriver.WebDriver()
 
-    for dir in dirs:
-        check_folder(dir)
+    aws_session = aiobotocore.session.get_session()
+    s3_client = aws_session.create_client(
+        service_name="s3",
+        region_name=settings.AWS_S3_REGION_NAME,
+        endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+        aws_access_key_id=settings.AWS_S3_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_S3_SECRET_ACCESS_KEY,
+    )
+    state.s3_client = await s3_client.__aenter__()
 
     # Load views so the existing one will still work.
     bot.add_view(views.ReportView(bot))
@@ -137,7 +135,7 @@ async def on_ready() -> None:
 
 @bot.tree.command(
     name="genembed",
-    description="Generate an embed for a channel!",
+    description="Generate an interactive embed for a specific channel!",
 )
 async def genembed(
     interaction: discord.Interaction,
@@ -145,7 +143,9 @@ async def genembed(
     channel_id: str,
 ) -> None:
     # check if the user is an admin.
-    if not interaction.user.guild_permissions.administrator:  # type: ignore
+
+    assert isinstance(interaction.user, discord.Member)
+    if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message(
             "You must be an administrator to use this command!",
             ephemeral=True,
@@ -197,20 +197,20 @@ async def genembed(
 
 @bot.tree.command(
     name="request",
-    description="Request to upload a replay!",
+    description="Requests a score to upload!",
 )
 @app_commands.describe(replay_url="Akatsuki replay URL")
 async def request(
     interaction: discord.Interaction,
     replay_url: str,
 ) -> None:
-    channel = await bot.fetch_channel(settings.ADMIN_SCOREWATCH_CHANNEL_ID)
-    role = interaction.guild.get_role(settings.AKATSUKI_SCOREWATCH_ROLE_ID)  # type: ignore
-
-    if not role:
-        return  # ?????
-
     await interaction.response.defer(ephemeral=True)
+
+    channel = await bot.fetch_channel(settings.ADMIN_SCOREWATCH_CHANNEL_ID)
+
+    assert interaction.guild is not None
+    role = interaction.guild.get_role(settings.AKATSUKI_SCOREWATCH_ROLE_ID)
+    assert role is not None
 
     if interaction.channel_id != settings.SCOREWATCH_CHANNEL_ID:
         await interaction.followup.send(
@@ -228,9 +228,9 @@ async def request(
         )
         return
 
-    score_id = parsed_url.path[13:]
+    score_id_str = parsed_url.path[13:]
 
-    if not score_id.isnumeric():
+    if not score_id_str.isnumeric():
         await interaction.followup.send(
             "This is not a valid Akatsuki replay URL!\n"
             "Valid syntax: `https://akatsuki.gg/web/replays/XXXXXXXX`",
@@ -238,18 +238,17 @@ async def request(
         )
         return
 
-    replay_path = os.path.join(settings.DATA_DIR, "replay", f"{score_id}.osr")
-    if not os.path.exists(replay_path):
-        await state.http_client.download_file(replay_url, replay_path, is_replay=True)
+    score_id = int(score_id_str)
 
-    if not os.path.exists(replay_path):
+    osu_replay = await osu_replays.get_replay(score_id)
+    if not osu_replay:
         await interaction.followup.send(
-            "This replay does not exist!",
+            "Failed to parse the replay file!",
             ephemeral=True,
         )
         return
 
-    request_data = await sw_requests.fetch_one(int(score_id))
+    request_data = await sw_requests.fetch_one(score_id)
     if request_data:
         await interaction.followup.send(
             f"This score has been requested on <t:{int(request_data['created_at'].timestamp())}>, "
@@ -258,28 +257,26 @@ async def request(
         )
         return
 
-    replay_file = aiosu.utils.replay.parse_path(replay_path)
-
     relax = 0
     relax_text = "VN"
-    if replay_file.mods & Mod.Relax:
+    if osu_replay.mods & Mod.Relax:
         relax = 1
         relax_text = "RX"
-    elif replay_file.mods & Mod.Autopilot:
+    elif osu_replay.mods & Mod.Autopilot:
         relax = 2
         relax_text = "AP"
 
-    score_data = await scores.fetch_one(int(score_id), relax)
+    score_data = await scores.fetch_one(score_id, relax)
     if not score_data:
         await interaction.followup.send(
-            "Could not find information about this score!",
+            "Could not find this score!",
             ephemeral=True,
         )
         return
 
     thread_starter_message_embed = discord.Embed(
-        title="Replay Upload Request",
-        description=f"{interaction.user.mention} requested a replay upload for score ID **[{score_id}](https://akatsuki.gg/web/replays/{score_id})**",
+        title="Score Upload Request",
+        description=f"{interaction.user.mention} requested a score upload for score ID **[{score_id}](https://akatsuki.gg/web/replays/{score_id})**",
         color=0x3498DB,
     )
 
@@ -333,13 +330,16 @@ async def request(
                 {', '.join(users_mentions)}
             """,
         ),
-        file=discord.File(replay_path),
-        view=views.ScorewatchButtonView(int(score_id), bot),
+        file=discord.File(
+            io.BytesIO(osu_replay.raw_replay_data),
+            filename=f"{score_id}.osr",
+        ),
+        view=views.ScorewatchButtonView(score_id, bot),
     )
 
     request_data = await sw_requests.create(
         interaction.user.id,
-        int(score_id),
+        score_id,
         relax,
         status.value,
         thread_embed.id,
@@ -357,16 +357,14 @@ async def request(
 
 @bot.tree.command(
     name="generate",
-    description="Generate a youtube thumbnail, title and description!",
+    description="Generates score upload metadata!",
 )
 @app_commands.describe(
     score_id="Score ID",
-    username="(Optional) Username of the player",
-    artist="(Optional) Artist of the map",
-    title="(Optional) Title of the map",
-    difficulty_name="(Optional) Difficulty name of the map",
-    detail_text="(Optional) Detail text in bottom right corner (Thumbnail)",
-    detail_colour="(Optional) Detail colour (hex) for misc text (Thumbnail)",
+    username="(Optional) Player username",
+    artist="(Optional) Map artist",
+    title="(Optional) Map title",
+    difficulty_name="(Optional) Map difficulty name",
 )
 async def generate(
     interaction: discord.Interaction,
@@ -375,16 +373,15 @@ async def generate(
     artist: str = "",
     title: str = "",
     difficulty_name: str = "",
-    detail_text: str = "",
-    detail_colour: str = "",
 ) -> None:
     await interaction.response.defer()
 
-    role = interaction.guild.get_role(settings.AKATSUKI_SCOREWATCH_ROLE_ID)  # type: ignore
-    if not role:
-        return  # ???????
+    assert interaction.guild is not None
+    role = interaction.guild.get_role(settings.AKATSUKI_SCOREWATCH_ROLE_ID)
+    assert role is not None
 
-    if not role in interaction.user.roles and not interaction.user.id in SW_WHITELIST:  # type: ignore
+    assert isinstance(interaction.user, discord.Member)
+    if role not in interaction.user.roles and interaction.user.id not in SW_WHITELIST:
         await interaction.followup.send(
             "You don't have permission to run this command!",
             ephemeral=True,
@@ -398,52 +395,42 @@ async def generate(
         )
         return
 
-    # TODO: is this even needed now?
-    replay_path = os.path.join(settings.DATA_DIR, "replay", f"{score_id}.osr")
-    if not os.path.exists(replay_path):
-        await state.http_client.download_file(
-            f"https://akatsuki.gg/web/replays/{score_id}",
-            replay_path,
-            is_replay=True,
-        )
-
     relax = scorewatch.get_relax_from_score_id(int(score_id))
     score_data = await scores.fetch_one(int(score_id), relax)
     if not score_data:
         await interaction.followup.send(
-            "Couldn't find this score!",
+            "Could not find this score!",
             ephemeral=True,
         )
         return
 
-    metadata = await scorewatch.generate_normal_metadata(
+    upload_data = await scorewatch.generate_score_upload_resources(
         score_data,
         username,
         artist,
         title,
         difficulty_name,
-        detail_text,
-        detail_colour,
     )
 
-    if isinstance(metadata, str):
-        await interaction.followup.send(metadata)
+    if isinstance(upload_data, str):
+        await interaction.followup.send(upload_data)
         return
 
     await interaction.followup.send(
         "\n".join(
             (
                 "**Title:**",
-                f"```{metadata['title']}```",
+                f"```{upload_data['title']}```",
                 "",
                 "**Description:**",
-                f"```{metadata['description']}```",
+                f"```{upload_data['description']}```",
                 "",
                 "**Thumbnail:**",
             ),
         ),
         file=discord.File(
-            metadata["file"],
+            io.BytesIO(upload_data["image_data"]),
+            filename="thumbnail.jpg",
         ),
     )
 

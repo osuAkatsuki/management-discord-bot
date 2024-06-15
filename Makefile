@@ -7,14 +7,12 @@ build: # build all containers
 run-bg: # run all containers in the background
 	docker compose up -d \
 		management-discord-bot \
-		postgres \
-		selenium
+		postgres
 
 run: # run all containers in the foreground
 	docker compose up \
 		management-discord-bot \
-		postgres \
-		selenium
+		postgres
 
 stop: # stop all containers
 	docker compose down

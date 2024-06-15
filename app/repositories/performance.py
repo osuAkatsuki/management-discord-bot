@@ -2,6 +2,7 @@ from typing import cast
 from typing import TypedDict
 
 from app import state
+from app.common import settings
 
 
 class Performance(TypedDict):
@@ -19,7 +20,7 @@ async def fetch_one(
     miss_count: int,
 ) -> Performance | None:
     res = await state.http_client.post(
-        "https://performance.akatsuki.gg/api/v1/calculate",
+        f"{settings.APP_PERFORMANCE_URL}/api/v1/calculate",
         json=[
             {
                 "beatmap_md5": beatmap_md5,

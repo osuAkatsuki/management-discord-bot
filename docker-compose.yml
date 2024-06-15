@@ -14,13 +14,6 @@ services:
     # ports:
     #   - 5432:5432
 
-  selenium:
-    image: selenium/standalone-chrome:latest
-    volumes:
-      - ./data:/bot-data
-    ports:
-      - 4444:4444
-
   ## application services
   management-discord-bot:
     image: management-discord-bot:latest
@@ -30,7 +23,6 @@ services:
       - PULL_SECRETS_FROM_VAULT=${PULL_SECRETS_FROM_VAULT}
       - VAULT_ADDR=${VAULT_ADDR}
       - VAULT_TOKEN=${VAULT_TOKEN}
-      - DATA_DIR=${DATA_DIR}
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - SELENIUM_DRIVER_URL=${SELENIUM_DRIVER_URL}
       - READ_DB_SCHEME=${READ_DB_SCHEME}
@@ -64,5 +56,4 @@ services:
       - .:/srv/root
       - ./scripts:/scripts
     depends_on:
-      - selenium
       - postgres

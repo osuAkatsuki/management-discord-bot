@@ -1,31 +1,22 @@
 import datetime
 import os
+import tempfile
 import typing
 
 import aiosu
 import discord
 from aiosu.models.mods import Mod
 from discord.ext import commands
-from slider import Beatmap
 
 from app import osu
+from app import osu_beatmaps
 from app import state
-from app.common import settings
-from app.constants import DetailTextColour
+from app.adapters import aws_s3
 from app.constants import Status
 from app.repositories import performance
 from app.repositories.scores import Score
 from app.repositories.sw_requests import ScorewatchRequest
 from app.usecases import postprocessing
-
-
-def get_title_colour(relax: int) -> str:
-    return {  # from old psd template.
-        0: "#cde7ff",
-        1: "#fcff96",
-        2: "#c5ff96",
-    }[relax]
-
 
 RELAX_OFFSET = 500000000
 AP_OFFSET = 6148914691236517204
@@ -40,20 +31,17 @@ def get_relax_from_score_id(score_id: int) -> int:
     return 0
 
 
-def calculate_detail_text_and_colour(score_data: Score) -> tuple[str, str]:
+def calculate_detail_text(score_data: Score) -> str:
     detail_text = "FC"
-    detail_colour = DetailTextColour.FC
     if (
         score_data["count_miss"] == 0
         and score_data["max_combo"] <= score_data["beatmap"]["max_combo"] * 0.9
     ):
         detail_text = "SB"
-        detail_colour = DetailTextColour.SB
     elif score_data["count_miss"] != 0:
-        detail_text = f"{score_data['count_miss']}xMiss"
-        detail_colour = DetailTextColour.MISS
+        detail_text = f"{score_data['count_miss']}❌"
 
-    return detail_text, detail_colour.value
+    return detail_text
 
 
 async def format_request_embed(
@@ -62,7 +50,7 @@ async def format_request_embed(
     request_data: ScorewatchRequest,
     status: Status | None = None,
 ) -> discord.Embed:
-    detail_text, _ = calculate_detail_text_and_colour(score_data)
+    detail_text = calculate_detail_text(score_data)
 
     mods = aiosu.models.mods.Mods(score_data["mods"])
     mode_name = osu.int_to_osu_name(score_data["play_mode"])
@@ -80,7 +68,7 @@ async def format_request_embed(
             Replay: [Click here!](https://akatsuki.gg/web/replays/{score_data['id']})
         """,
         color=status.embed_colour,
-        timestamp=datetime.datetime.utcnow(),
+        timestamp=datetime.datetime.now(datetime.UTC),
     )
     embed.add_field(
         name="Score Information:",
@@ -99,25 +87,19 @@ async def format_request_embed(
     return embed
 
 
-async def generate_normal_metadata(
+class ScoreUploadResources(typing.TypedDict):
+    title: str
+    description: str
+    image_data: bytes
+
+
+async def generate_score_upload_resources(
     score_data: Score,
     username: str | None = None,
     artist: str | None = None,
     title: str | None = None,
     difficulty_name: str | None = None,
-    detail_text: str | None = None,
-    detail_colour: str | None = None,
-) -> dict[str, str] | str:
-    replay_path = os.path.join(settings.DATA_DIR, "replay", f"{score_data['id']}.osr")
-    if not os.path.exists(replay_path):
-        await state.http_client.download_file(
-            f"https://akatsuki.gg/web/replays/{score_data['id']}",
-            replay_path,
-            is_replay=True,
-        )
-
-    # if not os.path.exists(replay_path):
-    #    return "This replay does not exist!"
+) -> ScoreUploadResources | str:
 
     relax = get_relax_from_score_id(int(score_data["id"]))
     relax_text = "Vanilla"
@@ -128,64 +110,35 @@ async def generate_normal_metadata(
 
     mods = aiosu.models.mods.Mods(score_data["mods"])
 
-    osu_file_path = await osu.download_osu_file(score_data["beatmap"]["beatmap_id"])
-    if not osu_file_path:
-        return "Couldn't find this beatmap!"
+    beatmap_id = score_data["beatmap"]["beatmap_id"]
+    beatmapset_id = score_data["beatmap"]["beatmapset_id"]
 
-    osz_file_path = await osu.download_osz_file(score_data["beatmap"]["beatmapset_id"])
-    if not osz_file_path:
-        return "Couldn't find this beatmapset!"
+    beatmap_bytes = await osu_beatmaps.get_beatmap(beatmap_id)
 
-    # TODO: Temponary use this parser until me and aesth write one for aiosu.
-    try:
-        beatmap = Beatmap.from_path(osu_file_path)
-        beatmap_artist = beatmap.artist
-        beatmap_title = beatmap.title
-        beatmap_difficulty_name = beatmap.version
-    except Exception:  # When this happens, it's probably a mania map.
-        beatmap = osu.parse_osu_file_manually(osu_file_path)
-        beatmap_artist = beatmap["artist"]
-        beatmap_title = beatmap["title"]
-        beatmap_difficulty_name = beatmap["version"]
+    if not beatmap_bytes:
+        return "Couldn't find beatmap associated with this score!"
 
-    if not os.path.exists(
-        os.path.join(
-            settings.DATA_DIR,
-            "finals",
-            "backgrounds",
-            f"{score_data['beatmap']['beatmap_id']}_normal.png",
-        ),
-    ):
-        background_image = osu.find_beatmap_background(
-            score_data["beatmap"]["beatmap_id"],
-            score_data["beatmap"]["beatmapset_id"],
-        )
-        if not background_image:
-            return "Couldn't find background of this map!"
+    beatmap = osu_beatmaps.parse_beatmap_metadata(beatmap_bytes)
+    beatmap_background_image = await osu_beatmaps.get_beatmap_background_image(
+        beatmap_id,
+        beatmapset_id,
+    )
 
-        postprocessed_img = postprocessing.apply_effects_normal_template(
-            background_image,
-        )
-        postprocessed_img.save(
-            os.path.join(
-                settings.DATA_DIR,
-                "finals",
-                "backgrounds",
-                f"{score_data['beatmap']['beatmap_id']}_normal.png",
-            ),
-        )
+    if not beatmap_background_image:
+        return "Couldn't find beatmap associated with this score!"
 
-    if not detail_text and not detail_colour:
-        detail_text, detail_colour = calculate_detail_text_and_colour(score_data)
+    beatmap_background_image = postprocessing.apply_effects_normal_template(
+        beatmap_background_image,
+    )
 
     if not artist:
-        artist = beatmap_artist
+        artist = beatmap["artist"]
 
     if not title:
-        title = beatmap_title
+        title = beatmap["title"]
 
     if not difficulty_name:
-        difficulty_name = beatmap_difficulty_name
+        difficulty_name = beatmap["version"]
 
     if not username:
         username = score_data["user"]["username"]
@@ -201,146 +154,103 @@ async def generate_normal_metadata(
     )
 
     if not performance_data:
-        return "Couldn't find performance data for this score!"
+        return "Couldn't generate performance statistics for this score!"
 
     with open(os.path.join("templates", "scorewatch_normal.html")) as f:
         template = f.read()
 
-    template = template.replace(
-        r"<% beatmap.background_url %>",
-        (
-            "/bot-data"  # mounted in docker; DON'T TOUCH
-            + "/"
-            + "finals"
-            + "/"
-            + "backgrounds"
-            + "/"
-            + f"{score_data['beatmap']['beatmap_id']}_normal.png"
-        ),
-    )
-    template = template.replace(r"<% user.id %>", str(score_data["user"]["id"]))
-    template = template.replace(
-        r"<% score.grade %>",
-        score_data["rank"].lower().replace("h", ""),
-    )
-    template = template.replace(
-        r"<% score.rank_golden_html %>",
-        "rank-golden" if "H" in score_data["rank"] else "",
-    )
-    template = template.replace(
-        r"<% score.is_fc_html %>",
-        "is-fc" if score_data["full_combo"] else "",
-    )
-    template = template.replace(r"<% user.username %>", username)
-    template = template.replace(
-        r"<% user.country_code %>",
-        score_data["user"]["country"].lower(),
-    )
-    template = template.replace(r"<% score.pp %>", str(int(score_data["pp"])))
-    template = template.replace(
-        r"<% score.accuracy %>",
-        f"{score_data['accuracy']:.2f}",
-    )
+    with tempfile.NamedTemporaryFile(suffix=".png") as background_file:
+        beatmap_background_image.save(background_file.name, format="PNG")
+        template = template.replace(
+            r"<% beatmap.background_url %>",
+            background_file.name,
+        )
 
-    mods_html = []
-    modifiers = [relax_text]
-    for mod in mods:
+        template = template.replace(r"<% user.id %>", str(score_data["user"]["id"]))
+        template = template.replace(
+            r"<% score.grade %>",
+            score_data["rank"].lower().replace("h", ""),
+        )
+        template = template.replace(
+            r"<% score.rank_golden_html %>",
+            "rank-golden" if "H" in score_data["rank"] else "",
+        )
+        template = template.replace(
+            r"<% score.is_fc_html %>",
+            "is-fc" if score_data["full_combo"] else "",
+        )
+        template = template.replace(r"<% user.username %>", username)
+        template = template.replace(
+            r"<% user.country_code %>",
+            score_data["user"]["country"].lower(),
+        )
+        template = template.replace(r"<% score.pp %>", str(int(score_data["pp"])))
+        template = template.replace(
+            r"<% score.accuracy %>",
+            f"{score_data['accuracy']:.2f}",
+        )
 
-        if Mod.Nightcore in mods and mod is Mod.DoubleTime:
-            continue
-        if Mod.Perfect in mods and mod is Mod.SuddenDeath:
-            continue
+        mods_html = []
+        modifiers = [relax_text]
+        for mod in mods:
 
-        if mod == Mod.TouchDevice:
-            modifiers.append("Touchscreen")
-            continue
+            if Mod.Nightcore in mods and mod is Mod.DoubleTime:
+                continue
+            if Mod.Perfect in mods and mod is Mod.SuddenDeath:
+                continue
 
-        mods_html.append(f'<div class="mod hard">{mod.short_name}</div>')
+            if mod == Mod.TouchDevice:
+                modifiers.append("Touchscreen")
+                continue
 
-    for modifier in modifiers:
-        mods_html.append(f'<div class="mod modifier">{modifier}</div>')
+            if mod in (Mod.Relax, Mod.Autopilot):
+                continue
 
-    template = template.replace(
-        r"<% score.mods_html %>",
-        "\n          ".join(mods_html),
-    )
+            mods_html.append(f'<div class="mod hard">{mod.short_name}</div>')
 
-    template = template.replace(
-        r"<% score.grade_upper %>",
-        score_data["rank"].replace("H", ""),
-    )
-    template = template.replace(r"<% beatmap.name %>", title)
-    template = template.replace(r"<% beatmap.artist %>", artist)
-    template = template.replace(r"<% beatmap.version %>", difficulty_name)
-    template = template.replace(
-        r"<% beatmap.difficulty %>",
-        f"{performance_data['stars']:.2f}",
-    )
+        for modifier in modifiers:
+            mods_html.append(f'<div class="mod modifier">{modifier}</div>')
 
-    template = template.replace(
-        r"<% score.has_misses_html %>",
-        "has-misses" if score_data["count_miss"] > 0 else "",
-    )
-    template = template.replace(
-        r"<% score.miss_count %>",
-        str(score_data["count_miss"]),
-    )
+        template = template.replace(
+            r"<% score.mods_html %>",
+            "\n          ".join(mods_html),
+        )
 
-    with open(
-        os.path.join(
-            settings.DATA_DIR,
-            "finals",
-            "html",
-            f"{score_data['beatmap']['beatmap_id']}_{score_data['user']['id']}_score.html",
-        ),
-        "w",
-    ) as f:
-        f.write(template)
+        template = template.replace(
+            r"<% score.grade_upper %>",
+            score_data["rank"].replace("H", ""),
+        )
+        template = template.replace(r"<% beatmap.name %>", title)
+        template = template.replace(r"<% beatmap.artist %>", artist)
+        template = template.replace(r"<% beatmap.version %>", difficulty_name)
+        template = template.replace(
+            r"<% beatmap.difficulty %>",
+            f"{performance_data['stars']:.2f}",
+        )
 
-    url = os.path.join(
-        "/bot-data",  # mounted in docker; DON'T TOUCH
-        "finals",
-        "html",
-        f"{score_data['beatmap']['beatmap_id']}_{score_data['user']['id']}_score.html",
-    )
+        template = template.replace(
+            r"<% score.has_misses_html %>",
+            "has-misses" if score_data["count_miss"] > 0 else "",
+        )
+        template = template.replace(
+            r"<% score.miss_count %>",
+            str(score_data["count_miss"]),
+        )
 
-    state.webdriver.capture_web_canvas(
-        "file://" + url,
-        os.path.join(
-            settings.DATA_DIR,
-            "finals",
-            "thumbnails",
-            f"{score_data['beatmap']['beatmap_id']}_{score_data['user']['id']}_score.png",
-        ),
-    )
+        thumbnail_image_data = state.webdriver.capture_html_as_jpeg_image(template)
 
-    # convert to jpg because of youtube limit.
-    img = postprocessing.convert_to_jpg(
-        os.path.join(
-            settings.DATA_DIR,
-            "finals",
-            "thumbnails",
-            f"{score_data['beatmap']['beatmap_id']}_{score_data['user']['id']}_score.png",
-        ),
-    )
-    img.save(
-        os.path.join(
-            settings.DATA_DIR,
-            "finals",
-            "thumbnails",
-            f"{score_data['beatmap']['beatmap_id']}_{score_data['user']['id']}_score.jpg",
-        ),
-        format="JPEG",
-        subsampling=0,
-        quality=100,
+    user_id = score_data["user"]["id"]
+    await aws_s3.save_object_data(
+        f"/scorewatch/thumbnails/{beatmap_id}_{user_id}_score.jpg",
+        thumbnail_image_data,
     )
 
     song_name = f"{artist} - {title} [{difficulty_name}]"
-    title_detail_text = detail_text.replace("xMiss", "❌")  # type: ignore
+    detail_text = calculate_detail_text(score_data)
 
     title = (
         f"[{performance_data['stars']:.2f} ⭐] {relax_text} | {username} | "
-        f"{song_name} +{mods} {score_data['accuracy']:.2f}% {int(performance_data['pp'])}pp {title_detail_text}"
+        f"{song_name} +{mods} {score_data['accuracy']:.2f}% {int(performance_data['pp'])}pp {detail_text}"
     )
 
     description = "\n".join(
@@ -350,20 +260,14 @@ async def generate_normal_metadata(
             f"Map: https://akatsuki.gg/b/{score_data['beatmap']['beatmap_id']}",
             "",
             "Recorded by <>",
-            # "Thumbnail by <>",
             "Uploaded by <>",
             "------------------",
-            "Akatsuki is an osu! private server, featuring a normal and relax server with many active users! Join our discord here! https://akatsuki.gg/discord",
+            "Akatsuki is an osu! private server featuring normal, relax, and autopilot leaderboards, with many active users! Join our discord here! https://akatsuki.gg/discord",
         ),
     )
 
     return {
         "title": title,
         "description": description,
-        "file": os.path.join(
-            settings.DATA_DIR,
-            "finals",
-            "thumbnails",
-            f"{score_data['beatmap']['beatmap_id']}_{score_data['user']['id']}_score.jpg",
-        ),
+        "image_data": thumbnail_image_data,
     }

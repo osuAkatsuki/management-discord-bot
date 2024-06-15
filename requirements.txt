@@ -1,3 +1,4 @@
+aiobotocore
 aiosu
 asyncpg
 blend_modes
@@ -8,4 +9,4 @@ numpy
 Pillow
 python-dotenv
 selenium
-slider
+webdriver_manager

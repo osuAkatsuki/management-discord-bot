@@ -2,6 +2,7 @@ from typing import cast
 from typing import TypedDict
 
 from app import state
+from app.common import settings
 
 
 class User(TypedDict):
@@ -42,7 +43,7 @@ class Score(TypedDict):
 
 async def fetch_one(score_id: int, relax: int) -> Score | None:
     res = await state.http_client.get(
-        f"https://akatsuki.gg/api/v1/score?id={score_id}&rx={relax}",
+        f"{settings.APP_API_URL}/v1/score?id={score_id}&rx={relax}",
     )
     resp = res.json()
 
