@@ -5,6 +5,7 @@ import typing
 
 import aiosu
 import discord
+from aiosu.models.mods import Mod
 from discord.ext import commands
 
 from app import osu
@@ -16,7 +17,6 @@ from app.repositories import performance
 from app.repositories.scores import Score
 from app.repositories.sw_requests import ScorewatchRequest
 from app.usecases import postprocessing
-from aiosu.models.mods import Mod
 
 
 def get_title_colour(relax: int) -> str:

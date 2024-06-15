@@ -43,16 +43,19 @@ async def get_beatmap(beatmap_id: int) -> bytes | None:
 
 
 async def get_beatmap_background_image(
-    beatmap_id: int, beatmapset_id: int,
+    beatmap_id: int,
+    beatmapset_id: int,
 ) -> Image.Image | None:
     """Gets a beatmap's background image by any means."""
     background_image = await _get_beatmap_background_image_online(
-        beatmap_id, beatmapset_id,
+        beatmap_id,
+        beatmapset_id,
     )
 
     if background_image is None:
         background_image = await _get_beatmap_background_image_io(
-            beatmap_id, beatmapset_id,
+            beatmap_id,
+            beatmapset_id,
         )
 
     if background_image is None:
@@ -62,7 +65,8 @@ async def get_beatmap_background_image(
 
 
 async def _get_beatmap_background_image_online(
-    beatmap_id: int, _: int,
+    beatmap_id: int,
+    _: int,
 ) -> Image.Image | None:
     osu_background_url = f"https://api.osu.direct/media/background/{beatmap_id}"
     response = await state.http_client.get(
@@ -87,7 +91,8 @@ async def _get_beatmap_background_image_online(
 
 
 async def _get_beatmap_background_image_io(
-    beatmap_id: int, beatmapset_id: int,
+    beatmap_id: int,
+    beatmapset_id: int,
 ) -> Image.Image | None:
     """Gets a beatmap's background image by any means."""
     beatmap = await get_beatmap(beatmap_id)
