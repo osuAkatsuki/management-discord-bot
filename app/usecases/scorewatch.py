@@ -168,12 +168,11 @@ async def generate_score_upload_resources(
 
     with BytesIO() as background_buffer:
         beatmap_background_image.save(background_buffer, format="PNG")
-        background_image_data = background_buffer.read()
+        template = template.replace(
+            r"<% bg-image %>",
+            base64.b64encode(background_buffer.getvalue()).decode("utf-8"),
+        )
 
-    template = template.replace(
-        r"<% bg-image %>",
-        base64.b64encode(background_image_data).decode("utf-8"),
-    )
     template = template.replace(r"<% misc-colour %>", detail_colour)  # type: ignore
     template = template.replace(r"<% title-colour %>", title_colour)
     template = template.replace(r"<% username %>", username)
