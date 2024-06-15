@@ -274,7 +274,7 @@ async def request(
         return
 
     thread_starter_message_embed = discord.Embed(
-        title="Replay Upload Request",
+        title="Score Upload Request",
         description=f"{interaction.user.mention} requested a score upload for score ID **[{score_id}](https://akatsuki.gg/web/replays/{score_id})**",
         color=0x3498DB,
     )
