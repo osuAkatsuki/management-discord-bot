@@ -15,7 +15,6 @@ class Replay(ReplayFile):
 async def get_replay(score_id: int) -> Replay | None:
     response = await state.http_client.get(
         f"{settings.APP_SCORE_SERVICE_URL}/replays/{score_id}",
-        headers={"User-Agent": "akatsuki/management-bot"},
     )
     response.raise_for_status()
     osu_replay_data = response.read()

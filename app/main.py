@@ -104,7 +104,8 @@ async def on_ready() -> None:
 
     state.http_client = httpx.AsyncClient(
         follow_redirects=True,
-        timeout=60,
+        timeout=30,
+        headers={"User-Agent": "akatsuki/management-bot"},
     )
     state.webdriver = webdriver.WebDriver()
 

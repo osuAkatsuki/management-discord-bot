@@ -11,6 +11,7 @@ from discord.ext import commands
 from app import osu
 from app import osu_beatmaps
 from app import state
+from app.adapters import aws_s3
 from app.constants import Status
 from app.repositories import performance
 from app.repositories.scores import Score
@@ -238,10 +239,11 @@ async def generate_score_upload_resources(
 
         thumbnail_image_data = state.webdriver.capture_html_as_jpeg_image(template)
 
-    # await aws_s3.save_object_data(
-    #     f"/scorewatch/thumbnails/{beatmap_id}_{user_id}_score.jpg",
-    #     thumbnail_image_data,
-    # )
+    user_id = score_data["user"]["id"]
+    await aws_s3.save_object_data(
+        f"/scorewatch/thumbnails/{beatmap_id}_{user_id}_score.jpg",
+        thumbnail_image_data,
+    )
 
     song_name = f"{artist} - {title} [{difficulty_name}]"
     detail_text = calculate_detail_text(score_data)

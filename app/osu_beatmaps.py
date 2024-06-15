@@ -14,7 +14,6 @@ from app.adapters.beatmaps.mirrors import CatboyBestMirror
 from app.adapters.beatmaps.mirrors import OsuDirectMirror
 
 
-# New template doesn't use max_combo so we can silently get rid of slider package
 class Beatmap(TypedDict):
     artist: str
     title: str
@@ -70,7 +69,6 @@ async def _get_beatmap_background_image_online(
     osu_background_url = f"https://api.osu.direct/media/background/{beatmap_id}"
     response = await state.http_client.get(
         osu_background_url,
-        headers={"User-Agent": "akatsuki/management-bot"},
     )
     response.raise_for_status()
 
