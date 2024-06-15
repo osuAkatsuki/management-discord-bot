@@ -200,9 +200,7 @@ async def generate_score_upload_resources(
     template = template.replace(r"<% acc %>", f"{score_data['accuracy']:.2f}")
     template = template.replace(r"<% misc-text %>", detail_text)  # type: ignore
 
-    thumbnail_image_data = state.webdriver.capture_html_as_jpeg_image(
-        template, dependency_files={}
-    )
+    thumbnail_image_data = state.webdriver.capture_html_as_jpeg_image(template)
 
     # await aws_s3.save_object_data(
     #     f"/scorewatch/thumbnails/{beatmap_id}_{user_id}_score.jpg",

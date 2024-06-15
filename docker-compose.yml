@@ -14,13 +14,6 @@ services:
     # ports:
     #   - 5432:5432
 
-  selenium:
-    image: selenium/standalone-chrome:latest
-    volumes:
-      - ./data:/bot-data
-    ports:
-      - 4444:4444
-
   ## application services
   management-discord-bot:
     image: management-discord-bot:latest
@@ -60,5 +53,4 @@ services:
       - .:/srv/root
       - ./scripts:/scripts
     depends_on:
-      - selenium
       - postgres
