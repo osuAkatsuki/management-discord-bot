@@ -1,11 +1,11 @@
 import io
 import tempfile
+
+from PIL import Image
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
-
-from PIL import Image
 
 
 class WebDriver:

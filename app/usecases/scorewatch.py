@@ -1,16 +1,16 @@
+import base64
 import datetime
-from io import BytesIO
 import os
 import typing
-import base64
+from io import BytesIO
 
 import aiosu
 import discord
-from app import state
 from discord.ext import commands
 
 from app import osu
 from app import osu_beatmaps
+from app import state
 from app.adapters import aws_s3
 from app.constants import DetailTextColour
 from app.constants import Status
@@ -115,7 +115,7 @@ async def generate_score_upload_resources(
     detail_text: str | None = None,
     detail_colour: str | None = None,
 ) -> ScoreUploadResources | str:
-  
+
     relax = get_relax_from_score_id(int(score_data["id"]))
     relax_text = "Vanilla"
     if relax == 1:
@@ -137,7 +137,7 @@ async def generate_score_upload_resources(
 
     beatmap = osu_beatmaps.parse_beatmap_metadata(beatmap_bytes)
     beatmap_background_image = await osu_beatmaps.get_beatmap_background_image(
-        beatmap_id, beatmapset_id
+        beatmap_id, beatmapset_id,
     )
 
     if not beatmap_background_image:
@@ -187,22 +187,26 @@ async def generate_score_upload_resources(
 
     template = template.replace(r"<% user.id %>", str(score_data["user"]["id"]))
     template = template.replace(
-        r"<% score.grade %>", score_data["rank"].lower().replace("h", ""),
+        r"<% score.grade %>",
+        score_data["rank"].lower().replace("h", ""),
     )
     template = template.replace(
         r"<% score.rank_golden_html %>",
         "rank-golden" if "H" in score_data["rank"] else "",
     )
     template = template.replace(
-        r"<% score.is_fc_html %>", "is-fc" if score_data["full_combo"] else "",
+        r"<% score.is_fc_html %>",
+        "is-fc" if score_data["full_combo"] else "",
     )
     template = template.replace(r"<% user.username %>", username)
     template = template.replace(
-        r"<% user.country_code %>", score_data["user"]["country"].lower(),
+        r"<% user.country_code %>",
+        score_data["user"]["country"].lower(),
     )
     template = template.replace(r"<% score.pp %>", str(int(score_data["pp"])))
     template = template.replace(
-        r"<% score.accuracy %>", f"{score_data['accuracy']:.2f}",
+        r"<% score.accuracy %>",
+        f"{score_data['accuracy']:.2f}",
     )
 
     mods_html = []
@@ -224,17 +228,20 @@ async def generate_score_upload_resources(
         mods_html.append(f'<div class="mod modifier">{modifier}</div>')
 
     template = template.replace(
-        r"<% score.mods_html %>", "\n          ".join(mods_html),
+        r"<% score.mods_html %>",
+        "\n          ".join(mods_html),
     )
 
     template = template.replace(
-        r"<% score.grade_upper %>", score_data["rank"].replace("H", ""),
+        r"<% score.grade_upper %>",
+        score_data["rank"].replace("H", ""),
     )
     template = template.replace(r"<% beatmap.name %>", title)
     template = template.replace(r"<% beatmap.artist %>", artist)
     template = template.replace(r"<% beatmap.version %>", difficulty_name)
     template = template.replace(
-        r"<% beatmap.difficulty %>", f"{performance_data['stars']:.2f}",
+        r"<% beatmap.difficulty %>",
+        f"{performance_data['stars']:.2f}",
     )
 
     template = template.replace(
@@ -242,7 +249,8 @@ async def generate_score_upload_resources(
         "has-misses" if score_data["count_miss"] > 0 else "",
     )
     template = template.replace(
-        r"<% score.miss_count %>", str(score_data["count_miss"]),
+        r"<% score.miss_count %>",
+        str(score_data["count_miss"]),
     )
 
     thumbnail_image_data = state.webdriver.capture_html_as_jpeg_image(template)

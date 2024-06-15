@@ -1,9 +1,10 @@
 import io
 import logging
+
 import aiosu
+from aiosu.models.files import ReplayFile
 
 from app import state
-from aiosu.models.files import ReplayFile
 
 
 class Replay(ReplayFile):

@@ -1,17 +1,17 @@
 import io
 import logging
-from typing import TypedDict
 import typing
 import zipfile
+from typing import TypedDict
+
+from PIL import Image
+
 from app import state
 from app.adapters import aws_s3
 from app.adapters import osu_api_v1
-from PIL import Image
-from app.adapters.beatmaps.mirrors import (
-    BeatmapMirror,
-    CatboyBestMirror,
-    OsuDirectMirror,
-)
+from app.adapters.beatmaps.mirrors import BeatmapMirror
+from app.adapters.beatmaps.mirrors import CatboyBestMirror
+from app.adapters.beatmaps.mirrors import OsuDirectMirror
 
 
 # New template doesn't use max_combo so we can silently get rid of slider package
@@ -43,16 +43,16 @@ async def get_beatmap(beatmap_id: int) -> bytes | None:
 
 
 async def get_beatmap_background_image(
-    beatmap_id: int, beatmapset_id: int
+    beatmap_id: int, beatmapset_id: int,
 ) -> Image.Image | None:
     """Gets a beatmap's background image by any means."""
     background_image = await _get_beatmap_background_image_online(
-        beatmap_id, beatmapset_id
+        beatmap_id, beatmapset_id,
     )
 
     if background_image is None:
         background_image = await _get_beatmap_background_image_io(
-            beatmap_id, beatmapset_id
+            beatmap_id, beatmapset_id,
         )
 
     if background_image is None:
@@ -62,7 +62,7 @@ async def get_beatmap_background_image(
 
 
 async def _get_beatmap_background_image_online(
-    beatmap_id: int, _: int
+    beatmap_id: int, _: int,
 ) -> Image.Image | None:
     osu_background_url = f"https://api.osu.direct/media/background/{beatmap_id}"
     response = await state.http_client.get(
@@ -87,7 +87,7 @@ async def _get_beatmap_background_image_online(
 
 
 async def _get_beatmap_background_image_io(
-    beatmap_id: int, beatmapset_id: int
+    beatmap_id: int, beatmapset_id: int,
 ) -> Image.Image | None:
     """Gets a beatmap's background image by any means."""
     beatmap = await get_beatmap(beatmap_id)

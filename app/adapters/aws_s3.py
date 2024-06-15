@@ -1,4 +1,5 @@
 import logging
+
 from app import state
 from app.common import settings
 

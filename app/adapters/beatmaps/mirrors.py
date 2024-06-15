@@ -1,5 +1,6 @@
-from abc import ABC, abstractmethod
 import logging
+from abc import ABC
+from abc import abstractmethod
 from typing import ClassVar
 
 from app import state

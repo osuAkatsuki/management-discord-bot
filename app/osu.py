@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+
 def to_osu_mode_readable(mode: int) -> str:
     return {
         0: "osu!std",

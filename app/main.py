@@ -7,6 +7,7 @@ import sys
 import textwrap
 from typing import Literal
 from urllib import parse
+
 import aiobotocore.session
 import discord
 import httpx
