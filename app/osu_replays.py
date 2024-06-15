@@ -4,8 +4,8 @@ import logging
 import aiosu
 from aiosu.models.files import ReplayFile
 
-from app.common import settings
 from app import state
+from app.common import settings
 
 
 class Replay(ReplayFile):

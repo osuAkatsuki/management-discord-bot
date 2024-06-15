@@ -206,7 +206,6 @@ async def generate_score_upload_resources(
             if mod in (Mod.Relax, Mod.Autopilot):
                 continue
 
-
             mods_html.append(f'<div class="mod hard">{mod.short_name}</div>')
 
         for modifier in modifiers:
@@ -216,7 +215,6 @@ async def generate_score_upload_resources(
             r"<% score.mods_html %>",
             "\n          ".join(mods_html),
         )
-
 
         template = template.replace(
             r"<% score.grade_upper %>",

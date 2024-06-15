@@ -1,8 +1,8 @@
 from typing import cast
 from typing import TypedDict
 
-from app.common import settings
 from app import state
+from app.common import settings
 
 
 class User(TypedDict):
