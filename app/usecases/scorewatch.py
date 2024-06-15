@@ -1,6 +1,8 @@
 import datetime
+from io import BytesIO
 import os
 import typing
+import base64
 
 import aiosu
 import discord
@@ -164,17 +166,13 @@ async def generate_score_upload_resources(
     with open(os.path.join("templates", "scorewatch_normal.html")) as f:
         template = f.read()
 
+    with BytesIO() as background_buffer:
+        beatmap_background_image.save(background_buffer, format="PNG")
+        background_image_data = background_buffer.read()
+
     template = template.replace(
         r"<% bg-image %>",
-        (
-            "/bot-data"  # mounted in docker; DON'T TOUCH
-            + "/"
-            + "finals"
-            + "/"
-            + "backgrounds"
-            + "/"
-            + f"{score_data['beatmap']['beatmap_id']}_normal.png"
-        ),
+        base64.b64encode(background_image_data).decode("utf-8"),
     )
     template = template.replace(r"<% misc-colour %>", detail_colour)  # type: ignore
     template = template.replace(r"<% title-colour %>", title_colour)
@@ -204,10 +202,10 @@ async def generate_score_upload_resources(
 
     thumbnail_image_data = state.webdriver.capture_html_as_jpeg_image(template)
 
-    await aws_s3.save_object_data(
-        f"/scorewatch/thumbnails/{beatmap_id}_{user_id}_score.jpg",
-        thumbnail_image_data,
-    )
+    # await aws_s3.save_object_data(
+    #     f"/scorewatch/thumbnails/{beatmap_id}_{user_id}_score.jpg",
+    #     thumbnail_image_data,
+    # )
 
     performance_data = await performance.fetch_one(
         score_data["beatmap"]["beatmap_id"],
