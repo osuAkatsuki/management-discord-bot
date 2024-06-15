@@ -4,7 +4,6 @@ asyncpg
 blend_modes
 databases
 discord
-html2image
 httpx
 numpy
 Pillow
