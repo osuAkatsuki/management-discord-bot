@@ -56,7 +56,7 @@ class Database:
 
     async def __aexit__(
         self,
-        exc_type: Type[BaseException] | None,
+        exc_type: type[BaseException] | None,
         exc_value: None | BaseException | None,
         traceback: TracebackType | None,
     ) -> None:

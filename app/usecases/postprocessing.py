@@ -1,4 +1,4 @@
-from typing import Callable
+from collections.abc import Callable
 
 import blend_modes
 import numpy as np
