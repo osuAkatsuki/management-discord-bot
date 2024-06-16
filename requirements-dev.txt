@@ -1,4 +1,5 @@
 black
+mypy
 pre-commit
 reorder-python-imports
 types-aiobotocore[s3]
