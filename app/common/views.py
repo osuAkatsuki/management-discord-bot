@@ -22,7 +22,7 @@ class ReportForm(discord.ui.Modal):
         self.bot = bot
         super().__init__(title="Report a user for rule breaking!")
 
-        self.user_url = discord.ui.TextInput(
+        self.user_url = discord.ui.TextInput(  # type: ignore[var-annotated]
             label="Akatsuki profile URL",
             placeholder="https://akatsuki.gg/u/999",
             min_length=20,
@@ -31,7 +31,7 @@ class ReportForm(discord.ui.Modal):
         )
         self.add_item(self.user_url)
 
-        self.reason = discord.ui.TextInput(
+        self.reason = discord.ui.TextInput(  # type: ignore[var-annotated]
             label="Reason",
             style=discord.TextStyle.long,
             max_length=2000,
@@ -106,12 +106,12 @@ class ReportView(discord.ui.View):
     async def report(
         self,
         interaction: discord.Interaction,
-        _: discord.ui.Button,
+        _: discord.ui.Button[Any],
     ) -> None:
         await interaction.response.send_modal(ReportForm(self.bot))
 
 
-class ScorewatchVoteButton(discord.ui.Button):
+class ScorewatchVoteButton(discord.ui.Button[Any]):
     def __init__(
         self,
         score_id: int,
