@@ -4,3 +4,4 @@ pre-commit
 reorder-python-imports
 types-aiobotocore[s3]
 types-Pillow
+types-PyYAML

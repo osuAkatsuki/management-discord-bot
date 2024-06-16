@@ -37,7 +37,7 @@ def _apply_blend_mode(
     image: str | Image.Image,
     colour: tuple[int, int, int],
     opacity: float,
-    blend_mode: Callable,
+    blend_mode: Callable[[np.ndarray, np.ndarray, float], np.ndarray],
 ) -> Image.Image:
     """Apply blend function to image."""
 
