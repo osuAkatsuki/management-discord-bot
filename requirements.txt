@@ -8,5 +8,7 @@ httpx
 numpy
 Pillow
 python-dotenv
+python-json-logger
+pyyaml
 selenium
 webdriver_manager
