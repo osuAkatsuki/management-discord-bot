@@ -5,7 +5,8 @@ import os
 import ssl
 import sys
 import textwrap
-from typing import Any, Literal
+from typing import Any
+from typing import Literal
 from urllib import parse
 
 import aiobotocore.session
