@@ -1,6 +1,7 @@
 import datetime
 import io
 import textwrap
+from typing import Any
 from urllib import parse
 
 import discord
@@ -21,7 +22,7 @@ class ReportForm(discord.ui.Modal):
         self.bot = bot
         super().__init__(title="Report a user for rule breaking!")
 
-        self.user_url = discord.ui.TextInput(
+        self.user_url = discord.ui.TextInput(  # type: ignore[var-annotated]
             label="Akatsuki profile URL",
             placeholder="https://akatsuki.gg/u/999",
             min_length=20,
@@ -30,7 +31,7 @@ class ReportForm(discord.ui.Modal):
         )
         self.add_item(self.user_url)
 
-        self.reason = discord.ui.TextInput(
+        self.reason = discord.ui.TextInput(  # type: ignore[var-annotated]
             label="Reason",
             style=discord.TextStyle.long,
             max_length=2000,
@@ -80,7 +81,8 @@ class ReportForm(discord.ui.Modal):
         embed.set_footer(text=footer_text)
 
         channel = self.bot.get_channel(settings.ADMIN_REPORT_CHANNEL_ID)
-        if not channel:  # valid case when channel doesn't exist anymore
+        if not isinstance(channel, discord.TextChannel):
+            # valid case when channel doesn't exist anymore
             await interaction.followup.send(
                 "There was an error sending your report. Please try again later.",
                 ephemeral=True,
@@ -88,7 +90,7 @@ class ReportForm(discord.ui.Modal):
             return
 
         await interaction.followup.send("Thank you for your report!", ephemeral=True)
-        await channel.send(embed=embed)  # type: ignore
+        await channel.send(embed=embed)
 
 
 class ReportView(discord.ui.View):
@@ -104,25 +106,30 @@ class ReportView(discord.ui.View):
     async def report(
         self,
         interaction: discord.Interaction,
-        _: discord.ui.Button,
-    ):
+        _: discord.ui.Button[Any],
+    ) -> None:
         await interaction.response.send_modal(ReportForm(self.bot))
 
 
-class ScorewatchVoteButton(discord.ui.Button):
+class ScorewatchVoteButton(discord.ui.Button[Any]):
     def __init__(
-        self, score_id: int, vote_type: VoteType, bot: commands.Bot, *args, **kwargs
-    ):
+        self,
+        score_id: int,
+        vote_type: VoteType,
+        bot: commands.Bot,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         self.bot = bot
         self.vote_type = vote_type
         self.score_id = score_id
         super().__init__(*args, **kwargs)
 
-    async def callback(self, interaction: discord.Interaction):
+    async def callback(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer()
 
         if not isinstance(interaction.channel, discord.Thread):
-            return
+            return None
 
         assert interaction.guild is not None
         role = interaction.guild.get_role(settings.AKATSUKI_SCOREWATCH_ROLE_ID)
@@ -134,7 +141,7 @@ class ScorewatchVoteButton(discord.ui.Button):
                 "You don't have permission to vote on this request!",
                 ephemeral=True,
             )
-            return
+            return None
 
         request_data = await sw_requests.fetch_one(self.score_id)
         if not request_data:
@@ -142,14 +149,14 @@ class ScorewatchVoteButton(discord.ui.Button):
                 "This request no longer exist!",
                 ephemeral=True,
             )
-            return
+            return None
 
-        if request_data["request_status"] in Status.resolved_statuses():
+        if request_data["request_status"].value in Status.resolved_statuses():
             await interaction.followup.send(
                 "This request has already been resolved!",
                 ephemeral=True,
             )
-            return
+            return None
 
         prev_vote = await sw_votes.fetch_one(
             request_data["request_id"],
@@ -160,7 +167,7 @@ class ScorewatchVoteButton(discord.ui.Button):
                 "You have already voted on this request!",
                 ephemeral=True,
             )
-            return
+            return None
 
         await sw_votes.create(
             request_data["request_id"],
@@ -216,7 +223,7 @@ class ScorewatchVoteButton(discord.ui.Button):
         )
 
         if len(all_votes) != len(users_mentions):
-            return
+            return None
 
         # we have all the votes, let's resolve this request
         if len(upvotes) == len(downvotes):
@@ -241,7 +248,7 @@ class ScorewatchVoteButton(discord.ui.Button):
             await interaction.channel.send(
                 "Could not find this score!",
             )
-            return
+            return None
 
         updated_embed = await scorewatch.format_request_embed(
             self.bot,
@@ -251,7 +258,7 @@ class ScorewatchVoteButton(discord.ui.Button):
         )
         if isinstance(updated_embed, str):
             await interaction.channel.send(updated_embed)
-            return
+            return None
 
         await old_thread_msg.edit(embed=updated_embed)
 
@@ -265,14 +272,14 @@ class ScorewatchVoteButton(discord.ui.Button):
         )
 
         if status == Status.DENIED:
-            return  # we don't need to do anything else
+            return None  # we don't need to do anything else
 
         if status == Status.TIED:
             await interaction.channel.send(
                 "The request was tied, so it should be manually resolved "
                 f"by <@&{settings.AKATSUKI_SCOREWATCH_ROLE_ID}> members.",
             )
-            return
+            return None
 
         await interaction.channel.send(
             "Generating score upload metadata, it will show up in a moment...",
@@ -283,7 +290,7 @@ class ScorewatchVoteButton(discord.ui.Button):
 
             if isinstance(upload_data, str):
                 await interaction.channel.send(upload_data)
-                return
+                return None
 
             await interaction.channel.send(
                 "\n".join(

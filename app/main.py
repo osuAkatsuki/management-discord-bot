@@ -5,6 +5,7 @@ import os
 import ssl
 import sys
 import textwrap
+from typing import Any
 from typing import Literal
 from urllib import parse
 
@@ -39,9 +40,9 @@ SW_WHITELIST = [
 
 
 class Bot(commands.Bot):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(
-            command_prefix=commands.when_mentioned_or("!"),
+            commands.when_mentioned_or("!"),
             help_command=None,
             *args,
             **kwargs,
@@ -122,7 +123,7 @@ async def on_ready() -> None:
     # Load views so the existing one will still work.
     bot.add_view(views.ReportView(bot))
     for sw_request in await sw_requests.fetch_all():
-        if sw_request["request_status"] in Status.resolved_statuses():
+        if sw_request["request_status"].value in Status.resolved_statuses():
             continue  # No point in adding already resolved requests perhaps threads are even gone by now.
 
         bot.add_view(
@@ -145,6 +146,8 @@ async def genembed(
     # check if the user is an admin.
 
     assert isinstance(interaction.user, discord.Member)
+    assert bot.user is not None
+
     if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message(
             "You must be an administrator to use this command!",
@@ -162,7 +165,7 @@ async def genembed(
     await interaction.response.defer(ephemeral=True)
 
     channel = bot.get_channel(int(channel_id))
-    if not channel:
+    if not isinstance(channel, discord.TextChannel):
         await interaction.response.send_message(
             "Channel not found!",
             ephemeral=True,
@@ -172,7 +175,7 @@ async def genembed(
     if embed_type == "report":
         view = views.ReportView(bot)
 
-        bot_id = bot.user.id  # type: ignore
+        bot_id = bot.user.id
         embed = discord.Embed(
             title="Reporting a Player",
             description="\n\n".join(
@@ -186,7 +189,7 @@ async def genembed(
                 ),
             ),
         )
-        await channel.send(view=view, embed=embed)  # type: ignore
+        await channel.send(view=view, embed=embed)
 
     else:
         await interaction.followup.send("Invalid embed type!", ephemeral=True)
@@ -207,6 +210,12 @@ async def request(
     await interaction.response.defer(ephemeral=True)
 
     channel = await bot.fetch_channel(settings.ADMIN_SCOREWATCH_CHANNEL_ID)
+    if not isinstance(channel, discord.TextChannel):
+        await interaction.followup.send(
+            "Failed to find the scorewatch channel!",
+            ephemeral=True,
+        )
+        return
 
     assert interaction.guild is not None
     role = interaction.guild.get_role(settings.AKATSUKI_SCOREWATCH_ROLE_ID)
@@ -294,7 +303,7 @@ async def request(
         text="🔽 For specific details see the thread 🔽",
     )
 
-    thread_starter_message = await channel.send(embed=thread_starter_message_embed)  # type: ignore
+    thread_starter_message = await channel.send(embed=thread_starter_message_embed)
     status = Status.PENDING
 
     await interaction.followup.send(

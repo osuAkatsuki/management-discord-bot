@@ -1,7 +1,8 @@
-from typing import Callable
+from collections.abc import Callable
 
 import blend_modes
 import numpy as np
+import numpy.typing as npt
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageEnhance
@@ -37,7 +38,10 @@ def _apply_blend_mode(
     image: str | Image.Image,
     colour: tuple[int, int, int],
     opacity: float,
-    blend_mode: Callable,
+    blend_mode: Callable[
+        [npt.NDArray[np.float32], npt.NDArray[np.float32], float],
+        npt.NDArray[np.float32],
+    ],
 ) -> Image.Image:
     """Apply blend function to image."""
 

@@ -1,7 +1,6 @@
 import ssl
 from types import TracebackType
 from typing import Any
-from typing import Type
 
 from databases import Database as _Database
 from databases.core import Connection
@@ -56,7 +55,7 @@ class Database:
 
     async def __aexit__(
         self,
-        exc_type: Type[BaseException] | None,
+        exc_type: type[BaseException] | None,
         exc_value: None | BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
@@ -87,7 +86,7 @@ class Database:
     async def fetch_one(
         self,
         query: str,
-        values: dict | None = None,
+        values: dict[str, Any] | None = None,
     ) -> dict[str, Any] | None:
         async with self.pool.connection() as connection:
             rec = await connection.fetch_one(query, values)
@@ -97,26 +96,26 @@ class Database:
     async def fetch_all(
         self,
         query: str,
-        values: dict | None = None,
+        values: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
         async with self.pool.connection() as connection:
             recs = await connection.fetch_all(query, values)
 
         return [dict(rec._mapping) for rec in recs]
 
-    async def fetch_val(self, query: str, values: dict | None = None) -> Any:
+    async def fetch_val(self, query: str, values: dict[str, Any] | None = None) -> Any:
         async with self.pool.connection() as connection:
             val = await connection.fetch_val(query, values)
 
         return val
 
-    async def execute(self, query: str, values: dict | None = None) -> Any:
+    async def execute(self, query: str, values: dict[str, Any] | None = None) -> Any:
         async with self.pool.connection() as connection:
             result = await connection.execute(query, values)
 
         return result
 
-    async def execute_many(self, query: str, values: list) -> None:
+    async def execute_many(self, query: str, values: list[Any]) -> None:
         async with self.pool.connection() as connection:
             await connection.execute_many(query, values)
 

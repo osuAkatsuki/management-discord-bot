@@ -21,7 +21,7 @@ async def get_replay(score_id: int) -> Replay | None:
 
     if not osu_replay_data or osu_replay_data == b"Score not found!":
         logging.warning("Failed to find osu! replay file data")
-        return
+        return None
 
     try:
         with io.BytesIO(osu_replay_data) as replay_file:

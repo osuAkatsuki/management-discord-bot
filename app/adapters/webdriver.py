@@ -1,5 +1,6 @@
 import io
 import tempfile
+from typing import cast
 
 from PIL import Image
 from selenium import webdriver
@@ -9,7 +10,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 
 class WebDriver:
-    def __init__(self):
+    def __init__(self) -> None:
         self.options = Options()
         self.options.add_argument("--headless")
         self.options.add_argument("--no-sandbox")
@@ -28,7 +29,7 @@ class WebDriver:
             driver.set_window_size(1920, 1080)
 
             body_tag_el = driver.find_element("tag name", "body")
-            return body_tag_el.screenshot_as_png
+            return cast(bytes, body_tag_el.screenshot_as_png)
 
     def capture_html_as_jpeg_image(
         self,
