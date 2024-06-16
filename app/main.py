@@ -20,7 +20,7 @@ srv_root = os.path.join(os.path.dirname(__file__), "..")
 
 sys.path.append(srv_root)
 
-from app import osu_replays
+from app import osu_replays, logger
 from app.common import views
 from app.usecases import scorewatch
 from app.common import settings
@@ -436,4 +436,5 @@ async def generate(
 
 
 if __name__ == "__main__":
+    logger.configure_logging()
     bot.run(settings.DISCORD_TOKEN)
