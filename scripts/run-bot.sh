@@ -13,7 +13,7 @@ fi
 
 if [[ $PULL_SECRETS_FROM_VAULT -eq 1 ]]; then
   echo "Fetching secrets from vault"
-  akatsuki vault get management-discord-bot $APP_ENV -o .env
+  akatsuki vault get management-discord-bot production-k8s -o .env
   echo "Fetched secrets from vault"
   source .env
   echo "Sourced secrets from vault"
