@@ -4,12 +4,18 @@ import typing
 import httpx
 
 from app.common import settings
-from app.repositories.scores import Beatmap
 
 
 beatmaps_service_http_client = httpx.AsyncClient(
     base_url=settings.APP_BEATMAPS_SERVICE_URL,
 )
+
+
+class BeatmapMetadata(typing.TypedDict):
+    artist: str
+    title: str
+    creator: str
+    version: str
 
 
 async def get_osu_file_contents(beatmap_id: int) -> bytes | None:
@@ -71,9 +77,9 @@ async def get_beatmap_background_image_contents(beatmap_id: int) -> bytes | None
         return None
 
 
-def parse_beatmap_metadata(osu_file_bytes: bytes) -> Beatmap:
+def parse_beatmap_metadata(osu_file_bytes: bytes) -> BeatmapMetadata:
     lines = osu_file_bytes.decode().splitlines()
-    beatmap = {}
+    beatmap: dict[str, str] = {}
     for line in lines[1:]:
         if line.startswith("Artist:"):
             beatmap["artist"] = line.split(":")[1].strip()
@@ -84,4 +90,4 @@ def parse_beatmap_metadata(osu_file_bytes: bytes) -> Beatmap:
         elif line.startswith("Version:"):
             beatmap["version"] = line.split(":")[1].strip()
 
-    return typing.cast(Beatmap, beatmap)
+    return typing.cast(BeatmapMetadata, beatmap)
