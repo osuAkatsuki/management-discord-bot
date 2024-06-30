@@ -59,7 +59,7 @@ async def get_osz2_file_contents(beatmapset_id: int) -> bytes | None:
 async def get_beatmap_background_image_contents(beatmap_id: int) -> bytes | None:
     try:
         response = await beatmaps_service_http_client.get(
-            f"/api/osu-media/backgrounds/{beatmap_id}",
+            f"/api/osu-assets/backgrounds/{beatmap_id}",
         )
         if response.status_code == 404:
             logging.warning(
