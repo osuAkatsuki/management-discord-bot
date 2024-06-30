@@ -58,6 +58,7 @@ async def get_osu_file_contents(beatmap_id: int) -> bytes | None:
     except Exception:
         logging.warning(
             "Failed to fetch .osu file contents from beatmaps-service",
+            extra={"beatmap_id": beatmap_id},
             exc_info=True,
         )
         return None
@@ -74,6 +75,7 @@ async def get_osz2_file_contents(beatmapset_id: int) -> bytes | None:
     except Exception:
         logging.warning(
             "Failed to fetch .osz2 file contents from beatmaps-service",
+            extra={"beatmapset_id": beatmapset_id},
             exc_info=True,
         )
         return None
@@ -110,16 +112,24 @@ async def _get_beatmap_background_image_io(
     """Gets a beatmap's background image by any means."""
     beatmap = await get_osu_file_contents(beatmap_id)
     if beatmap is None:
+        logging.warning(
+            "Could not retrieve .osu file contents from beatmaps-service",
+            extra={"beatmap_id": beatmap_id},
+        )
         return None
 
     background_filename = find_beatmap_background_filename(beatmap)
     if background_filename is None:
+        logging.warning(
+            "Could not find background image filename in beatmap .osu file",
+            extra={"beatmap_id": beatmap_id},
+        )
         return None
 
     data = await get_osz2_file_contents(beatmapset_id)
-    if data is None:  # try next mirror
+    if data is None:
         logging.warning(
-            "Could not find a beatmap by set id on any of our mirrors",
+            "Could not retrieve .osz2 file contents from beatmaps-service",
             extra={"beatmapset_id": beatmapset_id},
         )
         return None
@@ -129,7 +139,7 @@ async def _get_beatmap_background_image_io(
             for filename in zip_ref.namelist():
                 if filename == background_filename:
                     break
-            else:  # try next mirror
+            else:
                 logging.warning(
                     "Could not find desired background image in beatmapset .osz2 file",
                     extra={
