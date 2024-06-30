@@ -37,8 +37,8 @@ async def get_osu_file_contents(beatmap_id: int) -> bytes | None:
         return None
 
 
-async def get_osz2_file_contents(beatmapset_id: int) -> bytes | None:
-    """Fetch the .osz2 file content for a beatmapset."""
+async def get_osz_file_contents(beatmapset_id: int) -> bytes | None:
+    """Fetch the .osz file content for a beatmapset."""
     try:
         response = await beatmaps_service_http_client.get(
             f"/public/api/d/{beatmapset_id}",
@@ -49,7 +49,7 @@ async def get_osz2_file_contents(beatmapset_id: int) -> bytes | None:
         return response.read()
     except Exception:
         logging.warning(
-            "Failed to fetch .osz2 file contents from beatmaps-service",
+            "Failed to fetch .osz file contents from beatmaps-service",
             extra={"beatmapset_id": beatmapset_id},
             exc_info=True,
         )
