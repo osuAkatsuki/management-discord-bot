@@ -113,7 +113,7 @@ async def generate_score_upload_resources(
     beatmap_id = score_data["beatmap"]["beatmap_id"]
     beatmapset_id = score_data["beatmap"]["beatmapset_id"]
 
-    beatmap_bytes = await osu_beatmaps.get_beatmap(beatmap_id)
+    beatmap_bytes = await osu_beatmaps.get_osu_file_contents(beatmap_id)
 
     if not beatmap_bytes:
         return "Couldn't find beatmap associated with this score!"

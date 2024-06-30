@@ -4,14 +4,17 @@ import typing
 import zipfile
 from typing import TypedDict
 
+import httpx
 from PIL import Image
 
 from app import state
 from app.adapters import aws_s3
-from app.adapters import osu_api_v1
-from app.adapters.beatmaps.mirrors import BeatmapMirror
-from app.adapters.beatmaps.mirrors import CatboyBestMirror
-from app.adapters.beatmaps.mirrors import OsuDirectMirror
+from app.common import settings
+
+
+beatmaps_service_http_client = httpx.AsyncClient(
+    base_url=settings.APP_BEATMAPS_SERVICE_URL,
+)
 
 
 class Beatmap(TypedDict):
@@ -19,25 +22,6 @@ class Beatmap(TypedDict):
     title: str
     creator: str
     version: str
-
-
-BEATMAP_MIRRORS: list[BeatmapMirror] = [
-    OsuDirectMirror(),
-    CatboyBestMirror(),
-]
-
-
-async def get_beatmap(beatmap_id: int) -> bytes | None:
-    osu_file_contents = await aws_s3.get_object_data(f"/beatmaps/{beatmap_id}.osu")
-    if not osu_file_contents:
-        osu_file_contents = await osu_api_v1.get_osu_file_contents(beatmap_id)
-
-    if not osu_file_contents:
-        return None
-
-    # NOTE: intentionally not saving to s3 here, because we don't want to
-    # disrupt other online systems with potentially newer data.
-    return osu_file_contents
 
 
 async def get_beatmap_background_image(
@@ -60,6 +44,40 @@ async def get_beatmap_background_image(
         return None
 
     return background_image
+
+
+async def get_osu_file_contents(beatmap_id: int) -> bytes | None:
+    """Fetch the .osu file content for a beatmap."""
+    try:
+        osu_file_contents = await aws_s3.get_object_data(f"/beatmaps/{beatmap_id}.osu")
+        if osu_file_contents:
+            return osu_file_contents
+
+        response = await state.http_client.get(
+            f"/api/osu-api/v1/osu-files/{beatmap_id}",
+        )
+        response.raise_for_status()
+        return response.read()
+    except Exception:
+        logging.warning(
+            "Failed to fetch .osu file contents from beatmaps-service",
+            exc_info=True,
+        )
+        return None
+
+
+async def get_osz2_file_contents(beatmapset_id: int) -> bytes | None:
+    """Fetch the .osz2 file content for a beatmapset."""
+    try:
+        response = await state.http_client.get(f"/public/api/d/{beatmapset_id}")
+        response.raise_for_status()
+        return response.read()
+    except Exception:
+        logging.warning(
+            "Failed to fetch .osz2 file contents from beatmaps-service",
+            exc_info=True,
+        )
+        return None
 
 
 async def _get_beatmap_background_image_online(
@@ -92,7 +110,7 @@ async def _get_beatmap_background_image_io(
     beatmapset_id: int,
 ) -> Image.Image | None:
     """Gets a beatmap's background image by any means."""
-    beatmap = await get_beatmap(beatmap_id)
+    beatmap = await get_osu_file_contents(beatmap_id)
     if beatmap is None:
         return None
 
@@ -100,29 +118,33 @@ async def _get_beatmap_background_image_io(
     if background_filename is None:
         return None
 
-    for mirror in BEATMAP_MIRRORS:
-        data = await mirror.fetch_beatmap_zip_data(beatmapset_id)
-        if data is None:  # try next mirror
-            continue
+    data = await get_osz2_file_contents(beatmapset_id)
+    if data is None:  # try next mirror
+        logging.warning(
+            "Could not find a beatmap by set id on any of our mirrors",
+            extra={"beatmapset_id": beatmapset_id},
+        )
+        return None
 
-        with io.BytesIO(data) as zip_file:
-            with zipfile.ZipFile(zip_file) as zip_ref:
-                for file_name in zip_ref.namelist():
-                    if file_name == background_filename:
-                        break
-                else:  # try next mirror
-                    continue
+    with io.BytesIO(data) as zip_file:
+        with zipfile.ZipFile(zip_file) as zip_ref:
+            for filename in zip_ref.namelist():
+                if filename == background_filename:
+                    break
+            else:  # try next mirror
+                logging.warning(
+                    "Could not find desired background image in beatmapset .osz2 file",
+                    extra={
+                        "beatmapset_id": beatmapset_id,
+                        "background_filename": background_filename,
+                    },
+                )
+                return None
 
-                with zip_ref.open(file_name) as image_file:
-                    image = Image.open(image_file)
-                    image.load()
-                    return image
-
-    logging.warning(
-        "Could not find a beatmap by set id on any of our mirrors",
-        extra={"beatmapset_id": beatmapset_id},
-    )
-    return None
+            with zip_ref.open(filename) as image_file:
+                image = Image.open(image_file)
+                image.load()
+                return image
 
 
 def parse_beatmap_metadata(osu_file_bytes: bytes) -> Beatmap:
