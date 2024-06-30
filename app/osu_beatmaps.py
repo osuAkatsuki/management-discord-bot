@@ -8,7 +8,6 @@ import httpx
 from PIL import Image
 
 from app import state
-from app.adapters import aws_s3
 from app.common import settings
 
 
@@ -49,13 +48,11 @@ async def get_beatmap_background_image(
 async def get_osu_file_contents(beatmap_id: int) -> bytes | None:
     """Fetch the .osu file content for a beatmap."""
     try:
-        osu_file_contents = await aws_s3.get_object_data(f"/beatmaps/{beatmap_id}.osu")
-        if osu_file_contents:
-            return osu_file_contents
-
         response = await state.http_client.get(
             f"/api/osu-api/v1/osu-files/{beatmap_id}",
         )
+        if response.status_code == 404:
+            return None
         response.raise_for_status()
         return response.read()
     except Exception:
@@ -69,7 +66,9 @@ async def get_osu_file_contents(beatmap_id: int) -> bytes | None:
 async def get_osz2_file_contents(beatmapset_id: int) -> bytes | None:
     """Fetch the .osz2 file content for a beatmapset."""
     try:
-        response = await state.http_client.get(f"/public/api/d/{beatmapset_id}")
+        response = await beatmaps_service_http_client.get(
+            f"/public/api/d/{beatmapset_id}",
+        )
         response.raise_for_status()
         return response.read()
     except Exception:
@@ -84,9 +83,8 @@ async def _get_beatmap_background_image_online(
     beatmap_id: int,
     _: int,
 ) -> Image.Image | None:
-    osu_background_url = f"https://api.osu.direct/media/background/{beatmap_id}"
     response = await state.http_client.get(
-        osu_background_url,
+        f"https://api.osu.direct/media/background/{beatmap_id}",
     )
     response.raise_for_status()
 
