@@ -112,10 +112,6 @@ async def _get_beatmap_background_image_io(
     """Gets a beatmap's background image by any means."""
     beatmap = await get_osu_file_contents(beatmap_id)
     if beatmap is None:
-        logging.warning(
-            "Could not retrieve .osu file contents from beatmaps-service",
-            extra={"beatmap_id": beatmap_id},
-        )
         return None
 
     background_filename = find_beatmap_background_filename(beatmap)
@@ -128,10 +124,6 @@ async def _get_beatmap_background_image_io(
 
     data = await get_osz2_file_contents(beatmapset_id)
     if data is None:
-        logging.warning(
-            "Could not retrieve .osz2 file contents from beatmaps-service",
-            extra={"beatmapset_id": beatmapset_id},
-        )
         return None
 
     with io.BytesIO(data) as zip_file:
