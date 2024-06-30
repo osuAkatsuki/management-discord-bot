@@ -11,7 +11,7 @@ class User(TypedDict):
     country: str
 
 
-class BeatmapMetadata(TypedDict):
+class Beatmap(TypedDict):
     beatmap_md5: str
     beatmap_id: int
     beatmapset_id: int
@@ -23,7 +23,7 @@ class BeatmapMetadata(TypedDict):
 
 class Score(TypedDict):
     user: User
-    beatmap: BeatmapMetadata
+    beatmap: Beatmap
     id: str
     score: int
     max_combo: int
