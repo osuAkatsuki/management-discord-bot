@@ -1,4 +1,5 @@
 import datetime
+import io
 import os
 import tempfile
 import typing
@@ -7,6 +8,7 @@ import aiosu
 import discord
 from aiosu.models.mods import Mod
 from discord.ext import commands
+from PIL import Image
 
 from app import osu
 from app import osu_beatmaps
@@ -111,7 +113,6 @@ async def generate_score_upload_resources(
     mods = aiosu.models.mods.Mods(score_data["mods"])
 
     beatmap_id = score_data["beatmap"]["beatmap_id"]
-    beatmapset_id = score_data["beatmap"]["beatmapset_id"]
 
     beatmap_bytes = await osu_beatmaps.get_osu_file_contents(beatmap_id)
 
@@ -119,17 +120,19 @@ async def generate_score_upload_resources(
         return "Couldn't find beatmap associated with this score!"
 
     beatmap = osu_beatmaps.parse_beatmap_metadata(beatmap_bytes)
-    beatmap_background_image = await osu_beatmaps.get_beatmap_background_image(
-        beatmap_id,
-        beatmapset_id,
+    background_image_contents = (
+        await osu_beatmaps.get_beatmap_background_image_contents(
+            beatmap_id,
+        )
     )
-
-    if not beatmap_background_image:
+    if not background_image_contents:
         return "Couldn't find beatmap associated with this score!"
 
-    beatmap_background_image = postprocessing.apply_effects_normal_template(
-        beatmap_background_image,
-    )
+    with io.BytesIO(background_image_contents) as image_file:
+        background_image = Image.open(image_file)
+        background_image.load()
+
+    background_image = postprocessing.apply_effects_normal_template(background_image)
 
     if not artist:
         artist = beatmap["artist"]
@@ -160,7 +163,7 @@ async def generate_score_upload_resources(
         template = f.read()
 
     with tempfile.NamedTemporaryFile(suffix=".png") as background_file:
-        beatmap_background_image.save(background_file.name, format="PNG")
+        background_image.save(background_file.name, format="PNG")
         template = template.replace(
             r"<% beatmap.background_url %>",
             background_file.name,
