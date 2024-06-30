@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-      - migrate-to-beatmaps-service
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
