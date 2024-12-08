@@ -3,7 +3,6 @@ from typing import cast
 from typing import TypedDict
 
 from app import state
-from app.constants import Status
 
 READ_PARAMS = """\
     request_id,
@@ -23,7 +22,7 @@ class ScorewatchRequest(TypedDict):
     requested_by: int
     score_id: int
     score_relax: int
-    request_status: Status
+    request_status: str
     thread_message_id: int
     thread_id: int
     created_at: datetime
