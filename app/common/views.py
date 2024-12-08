@@ -151,7 +151,7 @@ class ScorewatchVoteButton(discord.ui.Button[Any]):
             )
             return None
 
-        if request_data["request_status"].value in Status.resolved_statuses():
+        if request_data["request_status"] in Status.resolved_statuses():
             await interaction.followup.send(
                 "This request has already been resolved!",
                 ephemeral=True,
