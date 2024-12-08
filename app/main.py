@@ -123,7 +123,7 @@ async def on_ready() -> None:
     # Load views so the existing one will still work.
     bot.add_view(views.ReportView(bot))
     for sw_request in await sw_requests.fetch_all():
-        if sw_request["request_status"].value in Status.resolved_statuses():
+        if sw_request["request_status"] in Status.resolved_statuses():
             continue  # No point in adding already resolved requests perhaps threads are even gone by now.
 
         bot.add_view(
