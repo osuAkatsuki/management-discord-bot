@@ -134,3 +134,4 @@ thumbnail-data/
 .vscode
 pgdata/
 data/
+tmp/

@@ -246,7 +246,8 @@ async def generate_score_upload_resources(
     user_id = score_data["user"]["id"]
 
     if settings.APP_ENV != "production":
-        with open(f"{beatmap_id}_{user_id}_score.jpg", "wb") as stream:
+        os.makedirs("./tmp", exist_ok=True)
+        with open(f"./tmp/{beatmap_id}_{user_id}_score.jpg", "wb") as stream:
             stream.write(thumbnail_image_data)
     else:
         await aws_s3.save_object_data(

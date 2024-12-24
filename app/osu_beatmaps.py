@@ -7,7 +7,10 @@ from app.common import settings
 
 
 beatmaps_service_http_client = httpx.AsyncClient(
-    base_url=settings.APP_BEATMAPS_SERVICE_URL,
+    base_url=(
+        settings.APP_BEATMAPS_SERVICE_URL if settings.APP_ENV == "production" 
+        else settings.APP_LOCAL_BEATMAP_SERVICE_URL
+    ),
 )
 
 
@@ -21,13 +24,10 @@ class BeatmapMetadata(typing.TypedDict):
 async def get_osu_file_contents(beatmap_id: int) -> bytes | None:
     """Fetch the .osu file content for a beatmap."""
     try:
-        if settings.APP_ENV != "production":
-            async with httpx.AsyncClient(timeout=10) as http:
-                response = await http.get(f"https://osu.ppy.sh/osu/{beatmap_id}")
-        else:
-            response = await beatmaps_service_http_client.get(
-                f"/api/osu-api/v1/osu-files/{beatmap_id}",
-            )
+        response = await beatmaps_service_http_client.get(
+            f"/api/osu-api/v1/osu-files/{beatmap_id}" if 
+            settings.APP_ENV == "production" else f"/osu/{beatmap_id}",
+        )
 
         if response.status_code == 404:
             return None
@@ -63,15 +63,10 @@ async def get_osz_file_contents(beatmapset_id: int) -> bytes | None:
 
 async def get_beatmap_background_image_contents(beatmap_id: int) -> bytes | None:
     try:
-        if settings.APP_ENV != "production":
-            async with httpx.AsyncClient(timeout=10) as http:
-                response = await http.get(
-                    f"https://osu.direct/api/media/background/{beatmap_id}",
-                )
-        else:
-            response = await beatmaps_service_http_client.get(
-                f"/api/osu-assets/backgrounds/{beatmap_id}",
-            )
+        response = await beatmaps_service_http_client.get(
+            f"/api/osu-assets/backgrounds/{beatmap_id}" if 
+            settings.APP_ENV == "production" else f"/media/background/{beatmap_id}",
+        )
 
         if response.status_code == 404:
             logging.warning(
