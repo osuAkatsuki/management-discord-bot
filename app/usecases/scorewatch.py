@@ -245,15 +245,10 @@ async def generate_score_upload_resources(
 
     user_id = score_data["user"]["id"]
 
-    if settings.APP_ENV != "production":
-        os.makedirs("./tmp", exist_ok=True)
-        with open(f"./tmp/{beatmap_id}_{user_id}_score.jpg", "wb") as stream:
-            stream.write(thumbnail_image_data)
-    else:
-        await aws_s3.save_object_data(
-            f"/scorewatch/thumbnails/{beatmap_id}_{user_id}_score.jpg",
-            thumbnail_image_data,
-        )
+    await aws_s3.save_object_data(
+        f"/scorewatch/thumbnails/{beatmap_id}_{user_id}_score.jpg",
+        thumbnail_image_data,
+    )
 
     song_name = f"{artist} - {title} [{difficulty_name}]"
     detail_text = calculate_detail_text(score_data)
