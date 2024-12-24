@@ -24,6 +24,7 @@ async def get_osu_file_contents(beatmap_id: int) -> bytes | None:
         response = await beatmaps_service_http_client.get(
             f"/api/osu-api/v1/osu-files/{beatmap_id}",
         )
+
         if response.status_code == 404:
             return None
         response.raise_for_status()
@@ -61,6 +62,7 @@ async def get_beatmap_background_image_contents(beatmap_id: int) -> bytes | None
         response = await beatmaps_service_http_client.get(
             f"/api/osu-assets/backgrounds/{beatmap_id}",
         )
+
         if response.status_code == 404:
             logging.warning(
                 "Failed to retrieve beatmap background image from beatmaps-service",

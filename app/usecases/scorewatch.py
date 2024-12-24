@@ -243,6 +243,7 @@ async def generate_score_upload_resources(
         thumbnail_image_data = state.webdriver.capture_html_as_jpeg_image(template)
 
     user_id = score_data["user"]["id"]
+
     await aws_s3.save_object_data(
         f"/scorewatch/thumbnails/{beatmap_id}_{user_id}_score.jpg",
         thumbnail_image_data,
