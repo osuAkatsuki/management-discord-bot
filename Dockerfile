@@ -2,10 +2,10 @@ FROM python:3.11
 
 ENV PYTHONUNBUFFERED=1
 
-RUN wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+RUN wget http://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_127.0.6533.72-1_amd64.deb
 RUN apt update && \
-    apt install ./google-chrome-stable_current_amd64.deb -y && \
-    rm google-chrome-stable_current_amd64.deb
+    apt install ./google-chrome-stable_127.0.6533.72-1_amd64.deb -y && \
+    rm google-chrome-stable_127.0.6533.72-1_amd64.deb
 
 COPY requirements.txt .
 RUN pip install -U pip setuptools
