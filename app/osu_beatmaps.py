@@ -22,13 +22,13 @@ async def get_osu_file_contents(beatmap_id: int) -> bytes | None:
     """Fetch the .osu file content for a beatmap."""
     try:
         if settings.APP_ENV != "production":
-            async with  httpx.AsyncClient(timeout=10) as http:
+            async with httpx.AsyncClient(timeout=10) as http:
                 response = await http.get(f"https://osu.ppy.sh/osu/{beatmap_id}")
         else:
             response = await beatmaps_service_http_client.get(
                 f"/api/osu-api/v1/osu-files/{beatmap_id}",
             )
-            
+
         if response.status_code == 404:
             return None
         response.raise_for_status()
@@ -64,8 +64,10 @@ async def get_osz_file_contents(beatmapset_id: int) -> bytes | None:
 async def get_beatmap_background_image_contents(beatmap_id: int) -> bytes | None:
     try:
         if settings.APP_ENV != "production":
-            async with  httpx.AsyncClient(timeout=10) as http:
-                response = await http.get(f"https://osu.direct/api/media/background/{beatmap_id}")
+            async with httpx.AsyncClient(timeout=10) as http:
+                response = await http.get(
+                    f"https://osu.direct/api/media/background/{beatmap_id}",
+                )
         else:
             response = await beatmaps_service_http_client.get(
                 f"/api/osu-assets/backgrounds/{beatmap_id}",
