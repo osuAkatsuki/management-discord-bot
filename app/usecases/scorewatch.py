@@ -14,7 +14,6 @@ from app import osu
 from app import osu_beatmaps
 from app import state
 from app.adapters import aws_s3
-from app.common import settings
 from app.constants import Status
 from app.repositories import performance
 from app.repositories.scores import Score
