@@ -2,10 +2,13 @@ FROM python:3.11
 
 ENV PYTHONUNBUFFERED=1
 
-RUN wget http://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_127.0.6533.72-1_amd64.deb
 RUN apt update && \
-    apt install ./google-chrome-stable_127.0.6533.72-1_amd64.deb -y && \
-    rm google-chrome-stable_127.0.6533.72-1_amd64.deb
+    apt install -y wget gnupg && \
+    wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg && \
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list && \
+    apt update && \
+    apt install -y google-chrome-stable && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip install -U pip setuptools
