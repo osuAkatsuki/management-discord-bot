@@ -3,7 +3,7 @@ FROM python:3.11
 ENV PYTHONUNBUFFERED=1
 
 RUN apt update && \
-    apt install -y wget gnupg && \
+    apt install -y wget gnupg tini && \
     wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg && \
     echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list && \
     apt update && \
@@ -30,4 +30,4 @@ RUN chmod u+x /scripts/*
 COPY . /srv/root
 WORKDIR /srv/root
 
-ENTRYPOINT ["/scripts/run-bot.sh"]
+ENTRYPOINT ["/usr/bin/tini", "--", "/scripts/run-bot.sh"]
