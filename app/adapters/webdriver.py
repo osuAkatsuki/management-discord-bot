@@ -11,6 +11,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 WINDOW_WIDTH = 1920
 WINDOW_HEIGHT = 1080
 
+
 class WebDriver:
     def __init__(self) -> None:
         self.options = Options()
@@ -31,13 +32,17 @@ class WebDriver:
             driver.set_window_size(WINDOW_WIDTH, WINDOW_HEIGHT)
 
             # Get current viewport size
-            (inner_width, inner_height) = driver.execute_script("return [window.innerWidth, window.innerHeight]")
+            (inner_width, inner_height) = driver.execute_script(
+                "return [window.innerWidth, window.innerHeight]",
+            )
 
             width_diff = WINDOW_WIDTH - inner_width
             height_diff = WINDOW_HEIGHT - inner_height
 
             # Set window so viewport becomes exactly 1920x1080
-            driver.set_window_size(WINDOW_WIDTH + width_diff, WINDOW_HEIGHT + height_diff)
+            driver.set_window_size(
+                WINDOW_WIDTH + width_diff, WINDOW_HEIGHT + height_diff,
+            )
 
             html_tag_el = driver.find_element("tag name", "html")
             return cast(bytes, html_tag_el.screenshot_as_png)
