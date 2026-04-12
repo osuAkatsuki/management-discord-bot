@@ -41,7 +41,8 @@ class WebDriver:
 
             # Set window so viewport becomes exactly 1920x1080
             driver.set_window_size(
-                WINDOW_WIDTH + width_diff, WINDOW_HEIGHT + height_diff,
+                WINDOW_WIDTH + width_diff,
+                WINDOW_HEIGHT + height_diff,
             )
 
             html_tag_el = driver.find_element("tag name", "html")
