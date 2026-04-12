@@ -46,7 +46,7 @@ class WebDriver:
             )
 
             html_tag_el = driver.find_element("tag name", "html")
-            return cast(bytes, html_tag_el.screenshot_as_png)
+            return html_tag_el.screenshot_as_png
 
     def capture_html_as_jpeg_image(
         self,
