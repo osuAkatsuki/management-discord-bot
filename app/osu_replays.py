@@ -7,7 +7,6 @@ from aiosu.models.files import ReplayFile
 
 from app.common import settings
 
-
 score_service_http_client = httpx.AsyncClient(
     base_url=settings.APP_SCORE_SERVICE_URL,
 )
