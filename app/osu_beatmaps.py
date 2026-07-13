@@ -5,7 +5,6 @@ import httpx
 
 from app.common import settings
 
-
 beatmaps_service_http_client = httpx.AsyncClient(
     base_url=settings.APP_BEATMAPS_SERVICE_URL,
 )
