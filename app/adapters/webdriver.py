@@ -32,7 +32,7 @@ class WebDriver:
             driver.set_window_size(WINDOW_WIDTH, WINDOW_HEIGHT)
 
             # Get current viewport size
-            (inner_width, inner_height) = driver.execute_script(
+            inner_width, inner_height = driver.execute_script(
                 "return [window.innerWidth, window.innerHeight]",
             )
 

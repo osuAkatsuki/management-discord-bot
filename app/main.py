@@ -31,7 +31,6 @@ from app import state
 from app.constants import Status
 from app.repositories import scores, sw_requests
 
-
 SW_WHITELIST = [
     291927822635761665,  # lenforiee
     285190493703503872,  # cmyui
