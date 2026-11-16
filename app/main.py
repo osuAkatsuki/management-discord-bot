@@ -49,9 +49,10 @@ class Bot(commands.Bot):
         )
 
 
+# No privileged intents: Discord requires review for them once an app reaches 10,000 users.
+# Nothing reads message content, and scorewatch voters come from settings instead of the
+# role's member list (which needs the server members intent).
 intents = discord.Intents.default()
-intents.message_content = True
-intents.members = True
 intents.guilds = True
 
 bot = Bot(intents=intents)
@@ -218,8 +219,6 @@ async def request(
         return
 
     assert interaction.guild is not None
-    role = interaction.guild.get_role(settings.AKATSUKI_SCOREWATCH_ROLE_ID)
-    assert role is not None
 
     if interaction.channel_id != settings.SCOREWATCH_CHANNEL_ID:
         await interaction.followup.send(
@@ -320,7 +319,7 @@ async def request(
         name=thread_name,
     )
 
-    users_mentions = set(map(lambda x: x.mention, role.members))
+    users_mentions = [f"<@{user_id}>" for user_id in settings.SCOREWATCH_VOTER_IDS]
     thread_embed = await thread.send(
         content=textwrap.dedent(
             f"""\
