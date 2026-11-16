@@ -55,6 +55,12 @@ ADMIN_REPORT_CHANNEL_ID = int(os.environ["ADMIN_REPORT_CHANNEL_ID"])
 AKATSUKI_GUILD_ID = int(os.environ["AKATSUKI_GUILD_ID"])
 
 AKATSUKI_SCOREWATCH_ROLE_ID = int(os.environ["AKATSUKI_SCOREWATCH_ROLE_ID"])
+# Comma-separated Discord user IDs of the scorewatch team. Only they can vote, and a request
+# resolves once all of them have. Listed here because reading the role's members needs
+# Discord's privileged server members intent.
+SCOREWATCH_VOTER_IDS = [
+    int(user_id) for user_id in os.environ["SCOREWATCH_VOTER_IDS"].split(",")
+]
 
 AWS_S3_REGION_NAME = os.environ["AWS_S3_REGION_NAME"]
 AWS_S3_ACCESS_KEY_ID = os.environ["AWS_S3_ACCESS_KEY_ID"]

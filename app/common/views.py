@@ -131,12 +131,7 @@ class ScorewatchVoteButton(discord.ui.Button[Any]):
         if not isinstance(interaction.channel, discord.Thread):
             return None
 
-        assert interaction.guild is not None
-        role = interaction.guild.get_role(settings.AKATSUKI_SCOREWATCH_ROLE_ID)
-        assert role is not None
-
-        assert isinstance(interaction.user, discord.Member)
-        if role not in interaction.user.roles:
+        if interaction.user.id not in settings.SCOREWATCH_VOTER_IDS:
             await interaction.followup.send(
                 "You don't have permission to vote on this request!",
                 ephemeral=True,
@@ -185,7 +180,9 @@ class ScorewatchVoteButton(discord.ui.Button[Any]):
         )
         all_votes = {vote["vote_user_id"]: vote for vote in upvotes + downvotes}
 
-        users_mentions = {member.id: member.mention for member in role.members}
+        users_mentions = {
+            user_id: f"<@{user_id}>" for user_id in settings.SCOREWATCH_VOTER_IDS
+        }
 
         left_to_vote = set()
         for user_id, user_mention in users_mentions.items():
