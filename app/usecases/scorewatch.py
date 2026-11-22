@@ -226,7 +226,10 @@ async def generate_score_upload_resources(
         )
         template = template.replace(r"<% beatmap.name %>", html.escape(title))
         template = template.replace(r"<% beatmap.artist %>", html.escape(artist))
-        template = template.replace(r"<% beatmap.version %>", html.escape(difficulty_name))
+        template = template.replace(
+            r"<% beatmap.version %>",
+            html.escape(difficulty_name),
+        )
         template = template.replace(
             r"<% beatmap.difficulty %>",
             f"{performance_data['stars']:.2f}",
