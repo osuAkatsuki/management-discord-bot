@@ -1,4 +1,5 @@
 import datetime
+import html
 import io
 import os
 import tempfile
@@ -172,7 +173,7 @@ async def generate_score_upload_resources(
         template = template.replace(r"<% user.id %>", str(score_data["user"]["id"]))
         template = template.replace(
             r"<% score.grade %>",
-            score_data["rank"].lower().replace("h", ""),
+            html.escape(score_data["rank"].lower().replace("h", "")),
         )
         template = template.replace(
             r"<% score.rank_golden_html %>",
@@ -182,10 +183,10 @@ async def generate_score_upload_resources(
             r"<% score.is_fc_html %>",
             "is-fc" if score_data["full_combo"] else "",
         )
-        template = template.replace(r"<% user.username %>", username)
+        template = template.replace(r"<% user.username %>", html.escape(username))
         template = template.replace(
             r"<% user.country_code %>",
-            score_data["user"]["country"].lower(),
+            html.escape(score_data["user"]["country"].lower()),
         )
         template = template.replace(r"<% score.pp %>", str(int(score_data["pp"])))
         template = template.replace(
@@ -221,11 +222,14 @@ async def generate_score_upload_resources(
 
         template = template.replace(
             r"<% score.grade_upper %>",
-            score_data["rank"].replace("H", ""),
+            html.escape(score_data["rank"].replace("H", "")),
         )
-        template = template.replace(r"<% beatmap.name %>", title)
-        template = template.replace(r"<% beatmap.artist %>", artist)
-        template = template.replace(r"<% beatmap.version %>", difficulty_name)
+        template = template.replace(r"<% beatmap.name %>", html.escape(title))
+        template = template.replace(r"<% beatmap.artist %>", html.escape(artist))
+        template = template.replace(
+            r"<% beatmap.version %>",
+            html.escape(difficulty_name),
+        )
         template = template.replace(
             r"<% beatmap.difficulty %>",
             f"{performance_data['stars']:.2f}",
